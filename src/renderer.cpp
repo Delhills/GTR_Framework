@@ -9,12 +9,26 @@
 #include "utils.h"
 #include "scene.h"
 #include "extra/hdre.h"
-
+#include <algorithm>
 
 using namespace GTR;
 
+void Renderer::addRenderCalltoList(const Matrix44 model, Mesh* mesh, GTR::Material* material, Camera* camera) {
+
+	renderCall aux;
+
+	aux.model = model;
+	aux.mesh = mesh;
+	aux.material = material;
+	aux.camera = camera;
+
+	this->renderCallList.push_back(aux);
+
+}
+
 void Renderer::renderScene(GTR::Scene* scene, Camera* camera)
 {
+	renderCallList.clear();
 	for (int i = 0; i < scene->entities.size(); ++i)
 	{
 		BaseEntity* ent = scene->entities[i];
@@ -28,6 +42,11 @@ void Renderer::renderScene(GTR::Scene* scene, Camera* camera)
 			if(pent->prefab)
 				renderPrefab(ent->model, pent->prefab, camera);
 		}
+	}
+	std::sort(renderCallList.begin(), renderCallList.end(), compareAlphas);
+
+	for (int i = 0; i < renderCallList.size(); i++) {
+		renderMeshWithMaterial(renderCallList[i].model, renderCallList[i].mesh, renderCallList[i].material, renderCallList[i].camera);
 	}
 }
 
@@ -58,7 +77,8 @@ void Renderer::renderNode(const Matrix44& prefab_model, GTR::Node* node, Camera*
 		if (camera->testBoxInFrustum(world_bounding.center, world_bounding.halfsize) )
 		{
 			//render node mesh
-			renderMeshWithMaterial( node_model, node->mesh, node->material, camera );
+			//renderMeshWithMaterial( node_model, node->mesh, node->material, camera );
+			addRenderCalltoList(node_model, node->mesh, node->material, camera);
 			//node->mesh->renderBounding(node_model, true);
 		}
 	}

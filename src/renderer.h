@@ -8,7 +8,14 @@ namespace GTR {
 
 	class Prefab;
 	class Material;
-	
+
+	struct renderCall { //recuerda añadir el tipo (prefab, ...)
+		Matrix44 model;
+		Mesh* mesh;
+		Material* material;
+		Camera* camera;
+	};
+
 	// This class is in charge of rendering anything in our system.
 	// Separating the render from anything else makes the code cleaner
 	class Renderer
@@ -19,7 +26,10 @@ namespace GTR {
 		//add here your functions
 		//...
 
+		std::vector<renderCall> renderCallList;
 		//renders several elements of the scene
+		void addRenderCalltoList(const Matrix44 model, Mesh* mesh, GTR::Material* material, Camera* camera);
+
 		void renderScene(GTR::Scene* scene, Camera* camera);
 	
 		//to render a whole prefab (with all its nodes)

@@ -12,6 +12,9 @@
 
 #include "includes.h"
 #include "framework.h"
+#include "renderer.h"
+
+#
 
 //General functions **************
 long getTime();
@@ -61,6 +64,8 @@ std::string readJSONString(cJSON* obj, const char* name, const char* default_str
 bool readJSONVector(cJSON* obj, const char* name, std::vector<float>& dst);
 Vector3 readJSONVector3(cJSON* obj, const char* name, Vector3 default_value);
 Vector4 readJSONVector4(cJSON* obj, const char* name);
+bool compareAlphas(const GTR::renderCall& a, const GTR::renderCall& b);
+
 
 #endif
 

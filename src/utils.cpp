@@ -562,3 +562,10 @@ Vector4 readJSONVector4(cJSON* obj, const char* name)
 	}
 	return Vector4();
 }
+
+
+bool compareAlphas(const GTR::renderCall& a, const GTR::renderCall& b) {
+
+	return a.material->alpha_mode < b.material->alpha_mode;
+
+}
