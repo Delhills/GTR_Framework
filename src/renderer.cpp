@@ -28,7 +28,17 @@ void Renderer::addRenderCalltoList(const Matrix44 model, Mesh* mesh, GTR::Materi
 
 void Renderer::renderScene(GTR::Scene* scene, Camera* camera)
 {
+
 	renderCallList.clear();
+
+	//set the clear color (the background color)
+	glClearColor(scene->background_color.x, scene->background_color.y, scene->background_color.z, 1.0);
+
+	// Clear the color and the depth buffer
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	checkGLErrors();
+
+	//render entities
 	for (int i = 0; i < scene->entities.size(); ++i)
 	{
 		BaseEntity* ent = scene->entities[i];
@@ -72,7 +82,7 @@ void Renderer::renderNode(const Matrix44& prefab_model, GTR::Node* node, Camera*
 	{
 		//compute the bounding box of the object in world space (by using the mesh bounding box transformed to world space)
 		BoundingBox world_bounding = transformBoundingBox(node_model,node->mesh->box);
-		
+
 		//if bounding box is inside the camera frustum then the object is probably visible
 		if (camera->testBoxInFrustum(world_bounding.center, world_bounding.halfsize) )
 		{

@@ -48,6 +48,10 @@ bool GTR::Scene::load(const char* filename)
 		return false;
 	}
 
+	//read global properties
+	background_color = readJSONVector3(json, "background_color", background_color);
+	ambient_light = readJSONVector3(json, "ambient_light", ambient_light );
+
 	//entities
 	cJSON* entities_json = cJSON_GetObjectItemCaseSensitive(json, "entities");
 	cJSON* entity_json;
@@ -58,7 +62,8 @@ bool GTR::Scene::load(const char* filename)
 		if (!ent)
 		{
 			std::cout << " - ENTITY TYPE UNKNOWN: " << type_str << std::endl;
-			continue;
+			//continue;
+			ent = new BaseEntity();
 		}
 
 		addEntity(ent);
@@ -111,6 +116,7 @@ GTR::BaseEntity* GTR::Scene::createEntity(std::string type)
 {
 	if (type == "PREFAB")
 		return new GTR::PrefabEntity();
+    return NULL;
 }
 
 void GTR::BaseEntity::renderInMenu()

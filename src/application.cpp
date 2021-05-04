@@ -16,7 +16,6 @@
 #include <cstdio>
 
 Application* Application::instance = nullptr;
-Vector4 bg_color(0.5, 0.5, 0.5, 1.0);
 
 Camera* camera = nullptr;
 GTR::Scene* scene = nullptr;
@@ -48,7 +47,12 @@ Application::Application(int window_width, int window_height, SDL_Window* window
 
 	//loads and compiles several shaders from one single file
     //change to "data/shader_atlas_osx.txt" if you are in XCODE
-	if(!Shader::LoadAtlas("data/shader_atlas.txt"))
+#ifdef __APPLE__
+    const char* shader_atlas_filename = "data/shader_atlas_osx.txt";
+#else
+    const char* shader_atlas_filename = "data/shader_atlas.txt";
+#endif
+	if(!Shader::LoadAtlas(shader_atlas_filename))
         exit(1);
     checkGLErrors();
 
@@ -78,13 +82,6 @@ void Application::render(void)
 	//be sure no errors present in opengl before start
 	checkGLErrors();
 
-	//set the clear color (the background color)
-	glClearColor(bg_color.x, bg_color.y, bg_color.z, bg_color.w );
-
-	// Clear the color and the depth buffer
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
-    checkGLErrors();
-   
 	//set the camera as default (used by some functions in the framework)
 	camera->enable();
 
@@ -244,7 +241,8 @@ void Application::renderDebugGUI(void)
 	ImGui::Text(getGPUStats().c_str());					   // Display some text (you can use a format strings too)
 
 	ImGui::Checkbox("Wireframe", &render_wireframe);
-	ImGui::ColorEdit4("BG color", bg_color.v);
+	ImGui::ColorEdit4("BG color", scene->background_color.v);
+	ImGui::ColorEdit4("Ambient Light", scene->ambient_light.v);
 
 	//add info to the debug panel about the camera
 	if (ImGui::TreeNode(camera, "Camera")) {
