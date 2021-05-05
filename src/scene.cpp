@@ -116,6 +116,8 @@ GTR::BaseEntity* GTR::Scene::createEntity(std::string type)
 {
 	if (type == "PREFAB")
 		return new GTR::PrefabEntity();
+	if (type == "LIGHT")
+		return new GTR::LightEntity();
     return NULL;
 }
 
@@ -161,3 +163,13 @@ void GTR::PrefabEntity::renderInMenu()
 #endif
 }
 
+GTR::LightEntity::LightEntity()
+{
+	entity_type = LIGHT;
+}
+
+void GTR::LightEntity::configure(cJSON* json)
+{
+	color = vec3(1.0, 1.0, 1.0);
+	intensity = 1.0;
+}

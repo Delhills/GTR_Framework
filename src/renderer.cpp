@@ -13,7 +13,11 @@
 
 using namespace GTR;
 
-void Renderer::addRenderCalltoList(const Matrix44 model, Mesh* mesh, GTR::Material* material, Camera* camera) {
+Renderer::Renderer() {
+	render_mode = eRenderMode::SHOW_TEXTURE;
+}
+
+void Renderer::addRenderCalltoList(const Matrix44 model, Mesh* mesh, GTR::Material* material, Camera* camera, float dist) {
 
 	renderCall aux;
 
@@ -21,6 +25,7 @@ void Renderer::addRenderCalltoList(const Matrix44 model, Mesh* mesh, GTR::Materi
 	aux.mesh = mesh;
 	aux.material = material;
 	aux.camera = camera;
+	aux.distance_to_cam = dist;
 
 	this->renderCallList.push_back(aux);
 
@@ -52,8 +57,14 @@ void Renderer::renderScene(GTR::Scene* scene, Camera* camera)
 			if(pent->prefab)
 				renderPrefab(ent->model, pent->prefab, camera);
 		}
+		//is a light!
+		if (ent->entity_type == LIGHT)
+		{
+			LightEntity* lent = (GTR::LightEntity*)ent;
+			renderLight(lent);
+		}
 	}
-	std::sort(renderCallList.begin(), renderCallList.end(), compareAlphas);
+	std::sort(renderCallList.begin(), renderCallList.end(), compareNodes);
 
 	for (int i = 0; i < renderCallList.size(); i++) {
 		renderMeshWithMaterial(renderCallList[i].model, renderCallList[i].mesh, renderCallList[i].material, renderCallList[i].camera);
@@ -66,6 +77,12 @@ void Renderer::renderPrefab(const Matrix44& model, GTR::Prefab* prefab, Camera* 
 	assert(prefab && "PREFAB IS NULL");
 	//assign the model to the root node
 	renderNode(model, &prefab->root, camera);
+}
+
+void Renderer::renderLight(LightEntity* lent)
+{
+	light_color[0] = lent->color;
+	light_position[0] = lent->model.getTranslation();
 }
 
 //renders a node of the prefab and its children
@@ -88,7 +105,7 @@ void Renderer::renderNode(const Matrix44& prefab_model, GTR::Node* node, Camera*
 		{
 			//render node mesh
 			//renderMeshWithMaterial( node_model, node->mesh, node->material, camera );
-			addRenderCalltoList(node_model, node->mesh, node->material, camera);
+			addRenderCalltoList(node_model, node->mesh, node->material, camera, camera->eye.distance(world_bounding.center));
 			//node->mesh->renderBounding(node_model, true);
 		}
 	}
@@ -109,14 +126,24 @@ void Renderer::renderMeshWithMaterial(const Matrix44 model, Mesh* mesh, GTR::Mat
 	//define locals to simplify coding
 	Shader* shader = NULL;
 	Texture* texture = NULL;
+	GTR::Scene* scene = GTR::Scene::instance;
 
 	texture = material->color_texture.texture;
 	//texture = material->emissive_texture;
-	//texture = material->metallic_roughness_texture;
+	//texture = material->metallic_roughness_texture.texture;
 	//texture = material->normal_texture;
 	//texture = material->occlusion_texture;
 	if (texture == NULL)
 		texture = Texture::getWhiteTexture(); //a 1x1 white texture
+
+	Texture* metallic_roughness_texture = material->metallic_roughness_texture.texture;
+	if (metallic_roughness_texture == NULL)
+		metallic_roughness_texture = Texture::getWhiteTexture(); //a 1x1 white texture
+
+
+	Texture* emmisive_texture = material->emissive_texture.texture;
+	if (emmisive_texture == NULL)
+		emmisive_texture = Texture::getWhiteTexture(); //a 1x1 white texture
 
 	//select the blending
 	if (material->alpha_mode == GTR::eAlphaMode::BLEND)
@@ -135,7 +162,22 @@ void Renderer::renderMeshWithMaterial(const Matrix44 model, Mesh* mesh, GTR::Mat
     assert(glGetError() == GL_NO_ERROR);
 
 	//chose a shader
-	shader = Shader::Get("texture");
+
+	if (render_mode == SHOW_NORMAL) {
+		shader = Shader::Get("normal");
+	}
+	else if (render_mode == SHOW_TEXTURE) {
+		shader = Shader::Get("texture");
+	}
+	else if (render_mode == SHOW_UVS) {
+		shader = Shader::Get("uvs");
+	}
+	else if (render_mode == SHOW_OCCLUSION) {
+		shader = Shader::Get("occlusion");
+	}
+	else if (render_mode == DEFAULT) {
+		shader = Shader::Get("basiclight");
+	}
 
     assert(glGetError() == GL_NO_ERROR);
 
@@ -152,9 +194,22 @@ void Renderer::renderMeshWithMaterial(const Matrix44 model, Mesh* mesh, GTR::Mat
 	shader->setUniform("u_time", t );
 
 	shader->setUniform("u_color", material->color);
+	shader->setUniform("u_emissive_factor", material->emissive_factor);
+
+	shader->setUniform("u_ambient_light", scene->ambient_light);
+
+	//std::cout << "lightcol: " << light_color[0].x << ", " << light_color[0].y << ", " << light_color[0].z << "\n";
+	//std::cout << "lightpos: " << light_position[0].x << ", " << light_position[0].y << ", " << light_position[0].z << "\n";
+	shader->setUniform3Array("u_light_pos", (float*)&light_position, 3);
+	shader->setUniform3Array("u_light_color", (float*)&light_color, 3);
+	shader->setUniform1("u_num_lights", 1);
+
 	if(texture)
 		shader->setUniform("u_texture", texture, 0);
-
+	if (metallic_roughness_texture)
+		shader->setUniform("u_metallic_roughness_texture", metallic_roughness_texture, 1);
+	if(emmisive_texture)
+		shader->setUniform("u_emmisive_texture", emmisive_texture, 2);
 	//this is used to say which is the alpha threshold to what we should not paint a pixel on the screen (to cut polygons according to texture alpha)
 	shader->setUniform("u_alpha_cutoff", material->alpha_mode == GTR::eAlphaMode::MASK ? material->alpha_cutoff : 0);
 

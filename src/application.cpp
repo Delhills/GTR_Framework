@@ -287,6 +287,11 @@ void Application::onKeyDown( SDL_KeyboardEvent event )
 		case SDLK_f: camera->center.set(0, 0, 0); camera->updateViewMatrix(); break;
 		case SDLK_F5: Shader::ReloadAll(); break;
 		case SDLK_F6: scene->clear(); scene->load(scene->filename.c_str()); break;
+		case SDLK_y: renderer->render_mode = GTR::eRenderMode::SHOW_OCCLUSION; break;
+		case SDLK_u: renderer->render_mode = GTR::eRenderMode::SHOW_UVS; break;
+		case SDLK_i: renderer->render_mode = GTR::eRenderMode::SHOW_NORMAL; break;
+		case SDLK_o: renderer->render_mode = GTR::eRenderMode::SHOW_TEXTURE; break;
+		case SDLK_p: renderer->render_mode = GTR::eRenderMode::DEFAULT; break;
 	}
 }
 

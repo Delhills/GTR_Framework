@@ -564,8 +564,10 @@ Vector4 readJSONVector4(cJSON* obj, const char* name)
 }
 
 
-bool compareAlphas(const GTR::renderCall& a, const GTR::renderCall& b) {
+bool compareNodes(const GTR::renderCall& a, const GTR::renderCall& b) {
 
-	return a.material->alpha_mode < b.material->alpha_mode;
-
+	if (a.material->alpha_mode == b.material->alpha_mode) {
+		return a.distance_to_cam > b.distance_to_cam;
+	}
+	return a.material->alpha_mode <= b.material->alpha_mode;
 }
