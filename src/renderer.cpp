@@ -215,14 +215,14 @@ void Renderer::renderMeshWithMaterial(const Matrix44 model, Mesh* mesh, GTR::Mat
 			light_vector[i] = lightsScene[i]->target;
 		}
 
-		shader->setUniform1Array("u_light_type", (int*)&light_types, 3);
-		shader->setUniform3Array("u_light_pos", (float*)&light_position, 3);
-		shader->setUniform3Array("u_light_target", (float*)&light_target, 3);
-		shader->setUniform3Array("u_light_color", (float*)&light_color, 3);
-		shader->setUniform1Array("u_light_max_dists", (float*)&light_maxdists, 3);
-		shader->setUniform1Array("u_light_coscutoff", (float*)&light_coscutoff, 3);
-		shader->setUniform1Array("u_light_spotexp", (float*)&light_spotexponent, 3);
-		shader->setUniform1("u_num_lights", 3);
+		shader->setUniform1Array("u_light_type", (int*)&light_types, 4);
+		shader->setUniform3Array("u_light_pos", (float*)&light_position, 4);
+		shader->setUniform3Array("u_light_target", (float*)&light_target, 4);
+		shader->setUniform3Array("u_light_color", (float*)&light_color, 4);
+		shader->setUniform1Array("u_light_max_dists", (float*)&light_maxdists, 4);
+		shader->setUniform1Array("u_light_coscutoff", (float*)&light_coscutoff, 4);
+		shader->setUniform1Array("u_light_spotexp", (float*)&light_spotexponent, 4);
+		shader->setUniform("u_num_lights", 4);
 		//do the draw call that renders the mesh into the screen
 		mesh->render(GL_TRIANGLES);
 	}

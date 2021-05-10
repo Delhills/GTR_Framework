@@ -76,7 +76,7 @@
 			"color":[1,0.2,0.1],
 			"intensity":2.5,
 			"max_dist":70,
-			"lighttype":"point",
+			"lighttype":"point"
 		},
 		{
 			"name":"pointlight2",
@@ -86,7 +86,7 @@
 			"color":[1,0.2,0.1],
 			"intensity":2.5,
 			"max_dist":70,
-			"lighttype":"point",
+			"lighttype":"point"
 		},
 		{
 			"name":"moonlight",
@@ -98,7 +98,7 @@
 			"area_size":1500,
 			"max_dist":1000,
 			"cast_shadows": true,
-			"lighttype":"directional",
+			"lighttype":"directional"
 		}
 	]
 }

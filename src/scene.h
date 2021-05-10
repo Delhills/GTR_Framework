@@ -72,7 +72,9 @@ namespace GTR {
 		float spot_exponent;
 
 		Camera* camera;
-		FBO* shadow_fbo;
+		FBO* fbo;
+		float shadow_bias;
+		bool cast_shadows;
 
 
 		LightEntity();

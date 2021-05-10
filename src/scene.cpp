@@ -191,17 +191,14 @@ void GTR::LightEntity::configure(cJSON* json)
 
 	color = readJSONVector3(json, "color", Vector3(1.0, 0, 1.0));
 	intensity = readJSONNumber(json, "intensity", 1.0);
-	max_distance = readJSONNumber(json, "max_distance", 1000.0);
-
-	//target = (readJSONVector3(json, "target", Vector3(0, 0, 0))).normalize();
-	//model.setFrontAndOrthonormalize(target);
+	max_distance = readJSONNumber(json, "max_dist", 1000.0);
 
 
-	target = readJSONVector3(json, "target", Vector3()) - model.getTranslation();
+	target = readJSONVector3(json, "target", (model.getTranslation() + model.frontVector())) - model.getTranslation();
 	model.setFrontAndOrthonormalize(target);
 
 	cone_angle = readJSONNumber(json, "cone_angle", 30.0);
-	spot_exponent = readJSONNumber(json, "spot_exponent", 10.0);
+	spot_exponent = readJSONNumber(json, "cone_exp", 10.0);
 
 
 	scene->lights.push_back(this);
