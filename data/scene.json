@@ -1,6 +1,6 @@
 {
 	"background_color":[0.3,0.3,0.3],
-	"ambient_light":[1,1,1],
+	"ambient_light":[0.5,0.5,0.5],
 	"entities":[
 		{
 			"name":"floor",
@@ -30,10 +30,28 @@
 			"scale":[0.4,0.4,0.4]
 		},
 		{
-			"name":"lamp",
+			"name":"point",
 			"type":"LIGHT",
-			"position":[0,200,0],
-			"target":[0,0,0.1]
+			"lighttype":"point",
+			"position":[-157,24.7,-197],
+			"target":[0,0,0.1],
+			"color":[1, 0, 0]
+		},
+		{
+			"name":"spot",
+			"type":"LIGHT",
+			"lighttype":"spot",
+			"position":[-10,40,-30],
+			"target":[1,1,1],
+			"color":[1, 1, 1]
+		},
+		{
+			"name":"directional",
+			"type":"LIGHT",
+			"lighttype":"directional",
+			"position":[-10,200,-30],
+			"target":[0,1,0.1],
+			"color":[0.127, 0.065, 0.022]
 		}
 	]
 }

@@ -7,6 +7,7 @@ basiclight basic.vs basiclight.fs
 normal basic.vs normal.fs
 uvs basic.vs uvs.fs
 occlusion basic.vs occlusion.fs
+multipasslight basic.vs multipasslight.fs
 
 \basic.vs
 
@@ -125,8 +126,13 @@ uniform vec3 u_emissive_factor;
 uniform sampler2D u_texture;
 uniform sampler2D u_metallic_roughness_texture;
 uniform sampler2D u_emmisive_texture;
+uniform int u_light_type[MAX_LIGHTS];
 uniform vec3 u_light_pos[MAX_LIGHTS];
 uniform vec3 u_light_color[MAX_LIGHTS];
+uniform vec3 u_light_target[MAX_LIGHTS];
+uniform float u_light_max_dists[MAX_LIGHTS];
+uniform float u_light_coscutoff[MAX_LIGHTS];
+uniform float u_light_spotexp[MAX_LIGHTS];
 uniform int u_num_lights;
 
 
@@ -156,9 +162,36 @@ void main()
 
 	for( int i = 0; i < MAX_LIGHTS; ++i ){
 		if(i < u_num_lights){
-			vec3 L = normalize( u_light_pos[i] - v_world_position);
-			float NdotL = max( dot(L,N), 0.0 );
-			light += NdotL * u_light_color[i];
+			vec3 L;
+
+			float att_factor = 1;
+			float spotFactor = 1;
+
+			vec3 D = normalize(u_light_target[i]);
+
+			if (u_light_type[i] == 2){
+				L = -D;
+			}
+			else{
+				L = u_light_pos[i] - v_world_position;
+				att_factor = u_light_max_dists[i] - length(L);
+				att_factor /= u_light_max_dists[i];
+				att_factor = max( att_factor, 0.0 );
+				L = normalize(L);
+				if (u_light_type[i] == 1){
+					if (u_light_coscutoff[i] > 0.0) { 
+						float spotCosine = dot(D,-L);
+						if (spotCosine >= u_light_coscutoff[i]) { 
+							spotFactor = pow(spotCosine, u_light_spotexp[i]);
+						}
+						else{
+							spotFactor = 0;
+						}
+					}
+				}
+			}
+			float NdotL = clamp( dot(L,N), 0.0, 1.0);
+			light += NdotL * u_light_color[i] * att_factor * spotFactor;
 		}
 	}
 
@@ -170,6 +203,97 @@ void main()
 	FragColor = color;
 }
 
+\multipasslight.fs
+
+#version 330 core
+
+
+in vec3 v_position;
+in vec3 v_world_position;
+in vec3 v_normal;
+in vec2 v_uv;
+in vec4 v_color;
+
+uniform vec4 u_color;
+uniform vec3 u_emissive_factor;
+
+uniform sampler2D u_texture;
+uniform sampler2D u_metallic_roughness_texture;
+uniform sampler2D u_emmisive_texture;
+
+uniform int u_light_type;
+uniform vec3 u_light_pos;
+uniform vec3 u_light_color;
+uniform vec3 u_light_target;
+uniform float u_light_max_dists;
+uniform float u_light_coscutoff;
+uniform float u_light_spotexp;
+uniform int u_num_lights;
+
+
+uniform float u_time;
+uniform float u_alpha_cutoff;
+
+uniform vec3 u_ambient_light;
+
+out vec4 FragColor;
+
+void main()
+{
+	vec2 uv = v_uv;
+	vec4 color = u_color;
+	color *= texture( u_texture, v_uv );
+
+	if(color.a < u_alpha_cutoff)
+		discard;
+
+	float occlusion = texture( u_metallic_roughness_texture, v_uv ).x;
+
+	if(color.a < u_alpha_cutoff)
+		discard;
+
+	vec3 light = u_ambient_light * occlusion;
+	vec3 N = normalize(v_normal);
+
+	vec3 L;
+
+	float att_factor = 1;
+	float spotFactor = 1;
+
+	vec3 D = normalize(u_light_target);
+
+	if (u_light_type == 2){
+		L = -D;
+	}
+	else{
+		L = u_light_pos - v_world_position;
+		att_factor = u_light_max_dists - length(L);
+		att_factor /= u_light_max_dists;
+		att_factor = max( att_factor, 0.0 );
+		L = normalize(L);
+		if (u_light_type == 1){
+			if (u_light_coscutoff > 0.0) { 
+				float spotCosine = dot(D,-L);
+				if (spotCosine >= u_light_coscutoff) { 
+					spotFactor = pow(spotCosine, u_light_spotexp);
+				}
+				else{
+					spotFactor = 0;
+				}
+			}
+		}
+	}
+	float NdotL = clamp( dot(L,N), 0.0, 1.0);
+	light += NdotL * u_light_color * att_factor * spotFactor;
+
+
+
+	color.xyz *= light;
+
+	color.xyz += u_emissive_factor * texture(u_emmisive_texture, v_uv).xyz;
+
+	FragColor = color;
+}
 
 
 \normal.fs

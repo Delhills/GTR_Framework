@@ -2,6 +2,8 @@
 #define SCENE_H
 
 #include "framework.h"
+#include "fbo.h"
+#include "camera.h"
 #include <string>
 
 //forward declaration
@@ -62,15 +64,21 @@ namespace GTR {
 	{
 	public:
 		Vector3 color; 
+		Vector3 target;
 		float intensity; 
 		eLightType light_type;
 		float max_distance;	
 		float cone_angle;	
-		float area_size;
+		float spot_exponent;
+
+		Camera* camera;
+		FBO* shadow_fbo;
+
 
 		LightEntity();
 
 		virtual void configure(cJSON* json);
+		virtual void renderInMenu();
 	};
 
 
@@ -82,6 +90,7 @@ namespace GTR {
 
 		Vector3 background_color;
 		Vector3 ambient_light;
+		std::vector<LightEntity*> lights;
 
 		Scene();
 

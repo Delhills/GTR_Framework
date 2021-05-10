@@ -170,6 +170,46 @@ GTR::LightEntity::LightEntity()
 
 void GTR::LightEntity::configure(cJSON* json)
 {
-	color = vec3(1.0, 1.0, 1.0);
-	intensity = 1.0;
+	GTR::Scene* scene = GTR::Scene::instance;
+
+	std::string lighttype = readJSONString(json, "lighttype", "point");
+
+	if (lighttype == "point") light_type = GTR::eLightType::POINT;
+	else if (lighttype == "spot") light_type = GTR::eLightType::SPOT;
+	else if (lighttype == "directional") light_type = GTR::eLightType::DIRECTIONAL;
+	
+	color = readJSONVector3(json, "color", Vector3(1.0, 0, 1.0));
+	intensity = readJSONNumber(json, "intensity", 1.0);
+	max_distance = readJSONNumber(json, "max_distance", 1000.0);
+
+	//target = (readJSONVector3(json, "target", Vector3(0, 0, 0))).normalize();
+	//model.setFrontAndOrthonormalize(target);
+
+
+	target = readJSONVector3(json, "target", Vector3()) - model.getTranslation();
+	model.setFrontAndOrthonormalize(target);
+
+	cone_angle = readJSONNumber(json, "cone_angle", 30.0);
+	spot_exponent = readJSONNumber(json, "spot_exponent", 10.0);
+
+	
+	scene->lights.push_back(this);
 }
+void GTR::LightEntity::renderInMenu()
+{
+	BaseEntity::renderInMenu();
+
+#ifndef SKIP_IMGUI
+	ImGui::ColorEdit3("Color", color.v);
+	ImGui::SliderFloat("Intensity", &intensity, 0, 10);
+	ImGui::SliderFloat("Max distance", &max_distance, 0, 3700);
+
+	if (light_type == GTR::eLightType::SPOT)
+	{
+		ImGui::SliderFloat("Cone angle", &cone_angle, 0, 89);
+		ImGui::SliderFloat("Spot exponent", &spot_exponent, 0, 100);
+		//model.setFrontAndOrthonormalize(target);
+	}
+#endif
+}
+

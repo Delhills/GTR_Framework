@@ -11,7 +11,8 @@ namespace GTR {
 		SHOW_TEXTURE,
 		SHOW_NORMAL,
 		SHOW_OCCLUSION,
-		SHOW_UVS
+		SHOW_UVS,
+		MULTI
 	};
 
 	class Prefab;
@@ -35,9 +36,14 @@ namespace GTR {
 		//add here your functions
 		//...
 		eRenderMode render_mode;
-
+		eLightType light_types[5];
 		Vector3 light_position[5];
+		Vector3 light_target[5];
 		Vector3 light_color[5];
+		float light_maxdists[5];
+		float light_coscutoff[5];
+		float light_spotexponent[5];
+		Vector3 light_vector[5];
 
 		Renderer();
 
@@ -49,9 +55,6 @@ namespace GTR {
 	
 		//to render a whole prefab (with all its nodes)
 		void renderPrefab(const Matrix44& model, GTR::Prefab* prefab, Camera* camera);
-
-		//to render a light
-		void renderLight(LightEntity* lent);
 
 		//to render one node from the prefab and its children
 		void renderNode(const Matrix44& model, GTR::Node* node, Camera* camera);
