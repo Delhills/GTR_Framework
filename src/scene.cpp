@@ -9,6 +9,7 @@ GTR::Scene* GTR::Scene::instance = NULL;
 GTR::Scene::Scene()
 {
 	instance = this;
+
 }
 
 void GTR::Scene::clear()
@@ -40,7 +41,7 @@ bool GTR::Scene::load(const char* filename)
 		return false;
 	}
 
-	//parse json string 
+	//parse json string
 	cJSON* json = cJSON_Parse(content.c_str());
 	if (!json)
 	{
@@ -51,6 +52,9 @@ bool GTR::Scene::load(const char* filename)
 	//read global properties
 	background_color = readJSONVector3(json, "background_color", background_color);
 	ambient_light = readJSONVector3(json, "ambient_light", ambient_light );
+	main_camera.eye = readJSONVector3(json, "camera_position", main_camera.eye);
+	main_camera.center = readJSONVector3(json, "camera_target", main_camera.center);
+	main_camera.fov = readJSONNumber(json, "camera_fov", main_camera.fov);
 
 	//entities
 	cJSON* entities_json = cJSON_GetObjectItemCaseSensitive(json, "entities");
@@ -95,6 +99,13 @@ bool GTR::Scene::load(const char* filename)
 			Matrix44 R;
 			q.toMatrix(R);
 			ent->model = R * ent->model;
+		}
+
+		if (cJSON_GetObjectItem(entity_json, "target"))
+		{
+			Vector3 target = readJSONVector3(entity_json, "target", Vector3());
+			Vector3 front = target - ent->model.getTranslation();
+			ent->model.setFrontAndOrthonormalize(front);
 		}
 
 		if (cJSON_GetObjectItem(entity_json, "scale"))
@@ -177,7 +188,7 @@ void GTR::LightEntity::configure(cJSON* json)
 	if (lighttype == "point") light_type = GTR::eLightType::POINT;
 	else if (lighttype == "spot") light_type = GTR::eLightType::SPOT;
 	else if (lighttype == "directional") light_type = GTR::eLightType::DIRECTIONAL;
-	
+
 	color = readJSONVector3(json, "color", Vector3(1.0, 0, 1.0));
 	intensity = readJSONNumber(json, "intensity", 1.0);
 	max_distance = readJSONNumber(json, "max_distance", 1000.0);
@@ -192,7 +203,7 @@ void GTR::LightEntity::configure(cJSON* json)
 	cone_angle = readJSONNumber(json, "cone_angle", 30.0);
 	spot_exponent = readJSONNumber(json, "spot_exponent", 10.0);
 
-	
+
 	scene->lights.push_back(this);
 }
 void GTR::LightEntity::renderInMenu()
@@ -212,4 +223,3 @@ void GTR::LightEntity::renderInMenu()
 	}
 #endif
 }
-

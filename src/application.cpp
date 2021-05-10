@@ -69,7 +69,10 @@ Application::Application(int window_width, int window_height, SDL_Window* window
 	if (!scene->load("data/scene.json"))
 		exit(1);
 
-	//This class will be the one in charge of rendering all 
+	camera->lookAt(scene->main_camera.eye, scene->main_camera.center, Vector3(0, 1, 0));
+	camera->fov = scene->main_camera.fov;
+
+	//This class will be the one in charge of rendering all
 	renderer = new GTR::Renderer(); //here so we have opengl ready in constructor
 
 	//hide the cursor
@@ -87,7 +90,7 @@ void Application::render(void)
 
 	//set default flags
 	glDisable(GL_BLEND);
-    
+
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_CULL_FACE);
 	if(render_wireframe)
@@ -115,7 +118,7 @@ void Application::update(double seconds_elapsed)
 {
 	float speed = seconds_elapsed * cam_speed; //the speed is defined by the seconds_elapsed so it goes constant
 	float orbit_speed = seconds_elapsed * 0.5;
-	
+
 	//async input to move the camera around
 	if (Input::isKeyPressed(SDL_SCANCODE_LSHIFT)) speed *= 10; //move faster with left shift
 	if (Input::isKeyPressed(SDL_SCANCODE_W) || Input::isKeyPressed(SDL_SCANCODE_UP)) camera->move(Vector3(0.0f, 0.0f, 1.0f) * speed);
@@ -146,7 +149,7 @@ void Application::update(double seconds_elapsed)
 			}
 		}
 	}
-	
+
 	//move up or down the camera using Q and E
 	if (Input::isKeyPressed(SDL_SCANCODE_Q)) camera->moveGlobal(Vector3(0.0f, -1.0f, 0.0f) * speed);
 	if (Input::isKeyPressed(SDL_SCANCODE_E)) camera->moveGlobal(Vector3(0.0f, 1.0f, 0.0f) * speed);
@@ -241,8 +244,8 @@ void Application::renderDebugGUI(void)
 	ImGui::Text(getGPUStats().c_str());					   // Display some text (you can use a format strings too)
 
 	ImGui::Checkbox("Wireframe", &render_wireframe);
-	ImGui::ColorEdit4("BG color", scene->background_color.v);
-	ImGui::ColorEdit4("Ambient Light", scene->ambient_light.v);
+	ImGui::ColorEdit3("BG color", scene->background_color.v);
+	ImGui::ColorEdit3("Ambient Light", scene->ambient_light.v);
 
 	//add info to the debug panel about the camera
 	if (ImGui::TreeNode(camera, "Camera")) {
@@ -286,7 +289,12 @@ void Application::onKeyDown( SDL_KeyboardEvent event )
 		case SDLK_F1: render_debug = !render_debug; break;
 		case SDLK_f: camera->center.set(0, 0, 0); camera->updateViewMatrix(); break;
 		case SDLK_F5: Shader::ReloadAll(); break;
-		case SDLK_F6: scene->clear(); scene->load(scene->filename.c_str()); break;
+		case SDLK_F6:
+			scene->clear();
+			scene->load(scene->filename.c_str());
+			camera->lookAt(scene->main_camera.eye, scene->main_camera.center, Vector3(0, 1, 0));
+			camera->fov = scene->main_camera.fov;
+			break;
 		case SDLK_y: renderer->render_mode = GTR::eRenderMode::SHOW_OCCLUSION; break;
 		case SDLK_u: renderer->render_mode = GTR::eRenderMode::SHOW_UVS; break;
 		case SDLK_i: renderer->render_mode = GTR::eRenderMode::SHOW_NORMAL; break;
@@ -361,4 +369,3 @@ void Application::onResize(int width, int height)
 	window_width = width;
 	window_height = height;
 }
-

@@ -7,7 +7,7 @@
 #include <string>
 
 //forward declaration
-class cJSON; 
+class cJSON;
 
 
 //our namespace
@@ -54,7 +54,7 @@ namespace GTR {
 	public:
 		std::string filename;
 		Prefab* prefab;
-		
+
 		PrefabEntity();
 		virtual void renderInMenu();
 		virtual void configure(cJSON* json);
@@ -63,12 +63,12 @@ namespace GTR {
 	class LightEntity : public GTR::BaseEntity
 	{
 	public:
-		Vector3 color; 
+		Vector3 color;
 		Vector3 target;
-		float intensity; 
+		float intensity;
 		eLightType light_type;
-		float max_distance;	
-		float cone_angle;	
+		float max_distance;
+		float cone_angle;
 		float spot_exponent;
 
 		Camera* camera;
@@ -91,6 +91,7 @@ namespace GTR {
 		Vector3 background_color;
 		Vector3 ambient_light;
 		std::vector<LightEntity*> lights;
+		Camera main_camera;
 
 		Scene();
 
