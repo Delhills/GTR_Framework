@@ -70,17 +70,18 @@ namespace GTR {
 		float max_distance;
 		float cone_angle;
 		float spot_exponent;
+		float area_size;
 
-		Camera* camera;
+		Camera camera;
 		FBO* fbo;
 		float shadow_bias;
 		bool cast_shadows;
-
 
 		LightEntity();
 
 		virtual void configure(cJSON* json);
 		virtual void renderInMenu();
+
 	};
 
 

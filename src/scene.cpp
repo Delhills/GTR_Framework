@@ -1,7 +1,8 @@
 #include "scene.h"
 #include "utils.h"
-
+#include "application.h"
 #include "prefab.h"
+#include "shader.h"
 #include "extra/cJSON.h"
 
 GTR::Scene* GTR::Scene::instance = NULL;
@@ -101,13 +102,6 @@ bool GTR::Scene::load(const char* filename)
 			ent->model = R * ent->model;
 		}
 
-		if (cJSON_GetObjectItem(entity_json, "target"))
-		{
-			Vector3 target = readJSONVector3(entity_json, "target", Vector3());
-			Vector3 front = target - ent->model.getTranslation();
-			ent->model.setFrontAndOrthonormalize(front);
-		}
-
 		if (cJSON_GetObjectItem(entity_json, "scale"))
 		{
 			Vector3 scale = readJSONVector3(entity_json, "scale", Vector3(1, 1, 1));
@@ -177,6 +171,7 @@ void GTR::PrefabEntity::renderInMenu()
 GTR::LightEntity::LightEntity()
 {
 	entity_type = LIGHT;
+	fbo = NULL;
 }
 
 void GTR::LightEntity::configure(cJSON* json)
@@ -197,9 +192,31 @@ void GTR::LightEntity::configure(cJSON* json)
 	target = readJSONVector3(json, "target", (model.getTranslation() + model.frontVector())) - model.getTranslation();
 	model.setFrontAndOrthonormalize(target);
 
+	cast_shadows = readJSONBool(json, "cast_shadows", false);
+	shadow_bias = readJSONNumber(json, "shadow_bias", 0.001);
+	area_size = readJSONNumber(json, "area_size", 1500);
+
+
 	cone_angle = readJSONNumber(json, "cone_angle", 30.0);
 	spot_exponent = readJSONNumber(json, "cone_exp", 10.0);
 
+	if (light_type == SPOT) {
+
+		if (cast_shadows) {
+			float width = Application::instance->window_width;
+			float height = Application::instance->window_height;
+			Vector3 lightpos = model.getTranslation();
+			camera.lookAt(lightpos, lightpos + model.frontVector(), Vector3(0, 1.001, 0));
+			camera.setPerspective(2 * cone_angle, width / (float)height, 1.0f, max_distance);
+		}
+	}
+	if (light_type == DIRECTIONAL) {
+		Vector3 lightpos = model.getTranslation();
+		if (cast_shadows) {
+			camera.lookAt(lightpos, lightpos + model.frontVector(), Vector3(0, 1.001, 0));
+			camera.setOrthographic(-area_size, area_size, -area_size, area_size, 0.1f, 5000.f);
+		}
+	}
 
 	scene->lights.push_back(this);
 }
@@ -211,12 +228,24 @@ void GTR::LightEntity::renderInMenu()
 	ImGui::ColorEdit3("Color", color.v);
 	ImGui::SliderFloat("Intensity", &intensity, 0, 10);
 	ImGui::SliderFloat("Max distance", &max_distance, 0, 3700);
+	ImGui::Checkbox("cast shadow", &cast_shadows);
 
 	if (light_type == GTR::eLightType::SPOT)
 	{
 		ImGui::SliderFloat("Cone angle", &cone_angle, 0, 89);
 		ImGui::SliderFloat("Spot exponent", &spot_exponent, 0, 100);
-		//model.setFrontAndOrthonormalize(target);
+		Vector3 lightpos = model.getTranslation();
+		//camera.lookAt(lightpos, lightpos + this->model.frontVector(), Vector3(0, 1.001, 0));
+		camera.lookAt(lightpos, lightpos + model.frontVector(), model.topVector());
+	}
+	if (light_type == GTR::eLightType::DIRECTIONAL)
+	{
+		ImGui::SliderFloat("Area size", &area_size, 0, 2000);
+		ImGui::SliderFloat("Shadow bias", &shadow_bias, -1.00000, 1.00000);
+		Vector3 lightpos = model.getTranslation();
+		//camera.lookAt(lightpos, lightpos + this->model.frontVector(), Vector3(0, 1.001, 0));
+		camera.lookAt(lightpos, lightpos + model.frontVector(), model.topVector());
+		camera.setOrthographic(-area_size, area_size, -area_size, area_size, 0.1f, 5000.f);
 	}
 #endif
 }

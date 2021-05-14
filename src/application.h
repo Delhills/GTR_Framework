@@ -28,6 +28,7 @@ public:
 	bool render_debug;
 	bool render_gui;
 
+
 	//some vars
 	bool mouse_locked; //tells if the mouse is locked (blocked in the center and not visible)
 	bool render_wireframe; //in case we want to render everything in wireframe mode

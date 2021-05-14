@@ -1,5 +1,6 @@
 #pragma once
 #include "prefab.h"
+#include "fbo.h"
 
 //forward declarations
 class Camera;
@@ -12,7 +13,8 @@ namespace GTR {
 		SHOW_NORMAL,
 		SHOW_OCCLUSION,
 		SHOW_UVS,
-		MULTI
+		SINGLE,
+		SHADOWMAP
 	};
 
 	class Prefab;
@@ -35,6 +37,10 @@ namespace GTR {
 
 		//add here your functions
 		//...
+		FBO fbo;
+		Texture* color_buffer;
+
+		bool rendering_shadowmap;
 		eRenderMode render_mode;
 		eLightType light_types[5];
 		Vector3 light_position[5];
@@ -44,12 +50,16 @@ namespace GTR {
 		float light_coscutoff[5];
 		float light_spotexponent[5];
 		Vector3 light_vector[5];
+		bool show_fbo = false;
+		bool showCameraDirectional = false;
 
 		Renderer();
 
 		std::vector<renderCall> renderCallList;
 		//renders several elements of the scene
 		void addRenderCalltoList(const Matrix44 model, Mesh* mesh, GTR::Material* material, Camera* camera, float dist);
+
+		void render(GTR::Scene* scene, Camera* camera);
 
 		void renderScene(GTR::Scene* scene, Camera* camera);
 	
@@ -61,6 +71,14 @@ namespace GTR {
 
 		//to render one mesh given its material and transformation matrix
 		void renderMeshWithMaterial(const Matrix44 model, Mesh* mesh, GTR::Material* material, Camera* camera);
+
+		void renderSceneShadowmaps(GTR::Scene* scene);
+
+		void renderMeshInShadowMap(Material* material, Camera* camera, Matrix44 model, Mesh* mesh);
+
+		void renderToFbo(GTR::Scene* scene, GTR::LightEntity* light);
+		//void renderToFbo(GTR::Scene* scene, Camera* camera);
+
 	};
 
 	Texture* CubemapFromHDRE(const char* filename);
