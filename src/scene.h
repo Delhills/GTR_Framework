@@ -45,7 +45,7 @@ namespace GTR {
 		BaseEntity() { entity_type = NONE; visible = true; }
 		virtual ~BaseEntity() {}
 		virtual void renderInMenu();
-		virtual void configure(cJSON* json) {}
+		virtual void configure(GTR::Scene* scene, cJSON* json) {}
 	};
 
 	//represents one prefab in the scene
@@ -57,7 +57,7 @@ namespace GTR {
 
 		PrefabEntity();
 		virtual void renderInMenu();
-		virtual void configure(cJSON* json);
+		virtual void configure(GTR::Scene* scene, cJSON* json);
 	};
 
 	class LightEntity : public GTR::BaseEntity
@@ -79,7 +79,7 @@ namespace GTR {
 
 		LightEntity();
 
-		virtual void configure(cJSON* json);
+		virtual void configure(GTR::Scene* scene, cJSON* json);
 		virtual void renderInMenu();
 
 	};

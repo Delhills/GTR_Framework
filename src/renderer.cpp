@@ -17,8 +17,7 @@ using namespace GTR;
 Renderer::Renderer() {
 
 	render_mode = eRenderMode::DEFAULT;
-
-	fbo.setDepthOnly(1024, 1024);
+	pipeline_mode = ePipelineMode::DEFERRED;
 
 }
 
@@ -54,6 +53,76 @@ void Renderer::render(GTR::Scene* scene, Camera* camera) {
 
 }
 
+
+void Renderer::renderForward(GTR::Scene* scene, std::vector <renderCall>& rendercalls, Camera* camera) {
+
+	//set the clear color (the background color)
+	glClearColor(scene->background_color.x, scene->background_color.y, scene->background_color.z, 1.0);
+
+	// Clear the color and the depth buffer
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	checkGLErrors();
+
+	for (size_t i = 0; i < rendercalls.size(); i++)
+	{
+		renderCall& rc = rendercalls[i];
+		renderMeshWithMaterial(render_mode, scene, rc.model, rc.mesh, rc.material, rc.camera);
+	}
+}
+
+void Renderer::renderDeferred(GTR::Scene* scene, std::vector <renderCall>& rendercalls, Camera* camera) {
+	
+	int w = Application::instance->window_width;
+	int h = Application::instance->window_height;
+
+
+	if (gbuffers_fbo.fbo_id == 0) {
+		gbuffers_fbo.create(w, 
+							h,
+							3,
+							GL_RGBA,
+							GL_UNSIGNED_BYTE);
+	}
+
+	gbuffers_fbo.bind();
+
+	glClearColor(0, 0, 0, 0);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glEnable(GL_DEPTH_TEST);
+	checkGLErrors();
+
+	for (size_t i = 0; i < rendercalls.size(); i++)
+	{
+		renderCall& rc = rendercalls[i];
+		renderMeshWithMaterial(eRenderMode::GBUFFERS, scene, rc.model, rc.mesh, rc.material, rc.camera);
+	}
+	
+	gbuffers_fbo.unbind();
+
+
+	if (show_gbuffers) {
+
+		glViewport(0, h * 0.5, w*0.5, h*0.5);
+		gbuffers_fbo.color_textures[0]->toViewport();
+		glViewport(w * 0.5, h * 0.5, w*0.5, h*0.5);
+		gbuffers_fbo.color_textures[1]->toViewport();
+		glViewport(0, 0, w*0.5, h*0.5);
+		gbuffers_fbo.color_textures[2]->toViewport();
+		glViewport(w * 0.5, 0, w*0.5, h*0.5);
+
+		Shader* depthShader = Shader::Get("depth");
+
+		depthShader->enable();
+		depthShader->setUniform("u_camera_nearfar", Vector2 (camera->near_plane, camera->far_plane));
+
+		gbuffers_fbo.depth_texture->toViewport(depthShader);
+		depthShader->disable();
+
+		glViewport(0, 0, w, h);
+	}
+}
+
+
 void Renderer::renderToFbo(GTR::Scene* scene, LightEntity* light) {
 
 	/*fbo.bind();
@@ -73,17 +142,9 @@ void Renderer::renderToFbo(GTR::Scene* scene, LightEntity* light) {
 	shader->disable();
 }
 
+void Renderer::collectRenderCalls(GTR::Scene* scene, Camera* camera) {
 
-void Renderer::renderScene(GTR::Scene* scene, Camera* camera)
-{
 	renderCallList.clear();
-
-	//set the clear color (the background color)
-	glClearColor(scene->background_color.x, scene->background_color.y, scene->background_color.z, 1.0);
-
-	// Clear the color and the depth buffer
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	checkGLErrors();
 
 	//render entities
 	for (int i = 0; i < scene->entities.size(); ++i)
@@ -96,28 +157,34 @@ void Renderer::renderScene(GTR::Scene* scene, Camera* camera)
 		if (ent->entity_type == PREFAB)
 		{
 			PrefabEntity* pent = (GTR::PrefabEntity*)ent;
-			if(pent->prefab)
-				renderPrefab(ent->model, pent->prefab, camera);
+			if (pent->prefab)
+				getRenderCallsFromPrefabs(ent->model, pent->prefab, camera);
 		}
 	}
 
 	std::sort(renderCallList.begin(), renderCallList.end(), compareNodes);
+}
 
-	for (int i = 0; i < renderCallList.size(); i++) {
-		renderMeshWithMaterial(renderCallList[i].model, renderCallList[i].mesh, renderCallList[i].material, renderCallList[i].camera);
-	}
+void Renderer::renderScene(GTR::Scene* scene, Camera* camera)
+{
+	collectRenderCalls(scene, camera);
+
+	if (pipeline_mode == FORWARD)
+		renderForward(scene, renderCallList, camera);
+	else if (pipeline_mode == DEFERRED)
+		renderDeferred(scene, renderCallList, camera);
 }
 
 //renders all the prefab
-void Renderer::renderPrefab(const Matrix44& model, GTR::Prefab* prefab, Camera* camera)
+void Renderer::getRenderCallsFromPrefabs(const Matrix44& model, GTR::Prefab* prefab, Camera* camera)
 {
 	assert(prefab && "PREFAB IS NULL");
 	//assign the model to the root node
-	renderNode(model, &prefab->root, camera);
+	getRenderCallsFromNode(model, &prefab->root, camera);
 }
 
 //renders a node of the prefab and its children
-void Renderer::renderNode(const Matrix44& prefab_model, GTR::Node* node, Camera* camera)
+void Renderer::getRenderCallsFromNode(const Matrix44& prefab_model, GTR::Node* node, Camera* camera)
 {
 	if (!node->visible)
 		return;
@@ -144,11 +211,11 @@ void Renderer::renderNode(const Matrix44& prefab_model, GTR::Node* node, Camera*
 
 	//iterate recursively with children
 	for (int i = 0; i < node->children.size(); ++i)
-		renderNode(prefab_model, node->children[i], camera);
+		getRenderCallsFromNode(prefab_model, node->children[i], camera);
 }
 
 //renders a mesh given its transform and material
-void Renderer::renderMeshWithMaterial(const Matrix44 model, Mesh* mesh, GTR::Material* material, Camera* camera)
+void Renderer::renderMeshWithMaterial(eRenderMode mode, GTR::Scene* scene, const Matrix44 model, Mesh* mesh, GTR::Material* material, Camera* camera)
 {
 	//in case there is nothing to do
 	if (!mesh || !mesh->getNumVertices() || !material )
@@ -158,20 +225,19 @@ void Renderer::renderMeshWithMaterial(const Matrix44 model, Mesh* mesh, GTR::Mat
 	//define locals to simplify coding
 	Shader* shader = NULL;
 	Texture* texture = NULL;
-	GTR::Scene* scene = GTR::Scene::instance;
+	texture = material->color_texture.texture;
+	if (texture == NULL)
+		texture = Texture::getWhiteTexture(); //a 1x1 white texture
 
-	if (rendering_shadowmap) {
-		renderMeshInShadowMap(material, camera, model, mesh);
+	if (rendering_shadowmap && mode == DEFAULT) {
+		renderMeshInShadowMap(material, camera, model, mesh, texture);
 		return;
 	}
 
-	texture = material->color_texture.texture;
 	//texture = material->emissive_texture;
 	//texture = material->metallic_roughness_texture.texture;
 	//texture = material->normal_texture;
 	//texture = material->occlusion_texture;
-	if (texture == NULL)
-		texture = Texture::getWhiteTexture(); //a 1x1 white texture
 
 	Texture* metallic_roughness_texture = material->metallic_roughness_texture.texture;
 	if (metallic_roughness_texture == NULL)
@@ -191,6 +257,7 @@ void Renderer::renderMeshWithMaterial(const Matrix44 model, Mesh* mesh, GTR::Mat
 	//select the blending
 	if (material->alpha_mode == GTR::eAlphaMode::BLEND)
 	{
+		if (mode == GBUFFERS) return;
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	}
@@ -206,7 +273,7 @@ void Renderer::renderMeshWithMaterial(const Matrix44 model, Mesh* mesh, GTR::Mat
 
 	//chose a shader
 
-	switch (render_mode)
+	switch (mode)
 	{
 	case GTR::DEFAULT:
 		shader = Shader::Get("multipasslight");
@@ -226,7 +293,8 @@ void Renderer::renderMeshWithMaterial(const Matrix44 model, Mesh* mesh, GTR::Mat
 	case GTR::SINGLE:
 		shader = Shader::Get("basiclight");
 		break;
-	case GTR::SHADOWMAP:
+	case GTR::GBUFFERS:
+		shader = Shader::Get("gbuffers");
 		break;
 	}
 
@@ -265,7 +333,7 @@ void Renderer::renderMeshWithMaterial(const Matrix44 model, Mesh* mesh, GTR::Mat
 	//this is used to say which is the alpha threshold to what we should not paint a pixel on the screen (to cut polygons according to texture alpha)
 	shader->setUniform("u_alpha_cutoff", material->alpha_mode == GTR::eAlphaMode::MASK ? material->alpha_cutoff : 0);
 
-	if (render_mode == SINGLE) {
+	if (mode == SINGLE) {
 		for (size_t i = 0; i < lightsScene.size() && i < 5; i++) {
 			light_types[i] = lightsScene[i]->light_type;
 			light_color[i] = lightsScene[i]->color * lightsScene[i]->intensity;
@@ -289,7 +357,7 @@ void Renderer::renderMeshWithMaterial(const Matrix44 model, Mesh* mesh, GTR::Mat
 		mesh->render(GL_TRIANGLES);
 	}
 
-	else if (render_mode == DEFAULT) {
+	else if (mode == DEFAULT) {
 		for (size_t i = 0; i < lightsScene.size() && i < 5; i++) {
 			LightEntity* light = lightsScene[i];
 			shader->setUniform("u_light_type", light->light_type);
@@ -335,9 +403,9 @@ void Renderer::renderMeshWithMaterial(const Matrix44 model, Mesh* mesh, GTR::Mat
 	glDisable(GL_BLEND);
 }
 
-void Renderer::renderMeshInShadowMap(Material* material, Camera* camera, Matrix44 model, Mesh* mesh)
+void Renderer::renderMeshInShadowMap(Material* material, Camera* camera, Matrix44 model, Mesh* mesh, Texture* texture)
 {
-	Shader* shader = Shader::Get("flat");
+	Shader* shader = Shader::Get("texture");
 
 	assert(glGetError() == GL_NO_ERROR);
 
@@ -345,9 +413,12 @@ void Renderer::renderMeshInShadowMap(Material* material, Camera* camera, Matrix4
 
 	shader->enable();
 
+	shader->setUniform("u_texture", texture, 0);
+	shader->setUniform("u_color", material->color);
 	shader->setUniform("u_camera_pos", camera->eye);
 	shader->setUniform("u_model", model);
 	shader->setUniform("u_viewprojection", camera->viewprojection_matrix);
+	shader->setUniform("u_alpha_cutoff", material->alpha_mode == GTR::eAlphaMode::MASK ? material->alpha_cutoff : 0);
 
 	mesh->render(GL_TRIANGLES);
 

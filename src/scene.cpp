@@ -10,7 +10,6 @@ GTR::Scene* GTR::Scene::instance = NULL;
 GTR::Scene::Scene()
 {
 	instance = this;
-
 }
 
 void GTR::Scene::clear()
@@ -108,7 +107,7 @@ bool GTR::Scene::load(const char* filename)
 			ent->model.scale(scale.x, scale.y, scale.z);
 		}
 
-		ent->configure(entity_json);
+		ent->configure(instance, entity_json);
 	}
 
 	//free memory
@@ -145,7 +144,7 @@ GTR::PrefabEntity::PrefabEntity()
 	prefab = NULL;
 }
 
-void GTR::PrefabEntity::configure(cJSON* json)
+void GTR::PrefabEntity::configure(GTR::Scene* scene, cJSON* json)
 {
 	if (cJSON_GetObjectItem(json, "filename"))
 	{
@@ -174,10 +173,8 @@ GTR::LightEntity::LightEntity()
 	fbo = NULL;
 }
 
-void GTR::LightEntity::configure(cJSON* json)
+void GTR::LightEntity::configure(GTR::Scene* scene, cJSON* json)
 {
-	GTR::Scene* scene = GTR::Scene::instance;
-
 	std::string lighttype = readJSONString(json, "lighttype", "point");
 
 	if (lighttype == "point") light_type = GTR::eLightType::POINT;
@@ -214,7 +211,7 @@ void GTR::LightEntity::configure(cJSON* json)
 		Vector3 lightpos = model.getTranslation();
 		if (cast_shadows) {
 			camera.lookAt(lightpos, lightpos + model.frontVector(), Vector3(0, 1.001, 0));
-			camera.setOrthographic(-area_size, area_size, -area_size, area_size, 0.1f, 5000.f);
+			camera.setOrthographic(-area_size, area_size, -area_size, area_size, -500, max_distance);
 		}
 	}
 
