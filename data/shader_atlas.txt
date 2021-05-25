@@ -9,6 +9,11 @@ normal basic.vs normal.fs
 uvs basic.vs uvs.fs
 occlusion basic.vs occlusion.fs
 multipasslight basic.vs multipasslight.fs
+<<<<<<< Updated upstream
+=======
+gbuffers basic.vs gbuffers.fs
+deferred quad.vs deferred.fs
+>>>>>>> Stashed changes
 
 \basic.vs
 
@@ -411,6 +416,7 @@ void main()
 
 
 	float NdotL = clamp( dot(L,N), 0.0, 1.0);
+	
 	light += NdotL * u_light_color * att_factor * spotFactor * shadow_factor;
 
 	color.xyz *= light;
@@ -418,6 +424,146 @@ void main()
 	color.xyz += u_emissive_factor * texture(u_emmisive_texture, v_uv).xyz;
 
 	FragColor = color;
+}
+
+
+\deferred.fs
+#version 330 core
+
+in vec2 v_uv;
+
+uniform sampler2D u_color_texture;
+uniform sampler2D u_normal_texture;
+uniform sampler2D u_extra_texture;
+uniform sampler2D u_depth_texture;
+
+
+uniform vec3 u_ambient_light; //pasar a funcion!!!!!!!!!!!
+
+uniform int u_light_type;
+uniform vec3 u_light_pos;
+uniform vec3 u_light_color;
+uniform vec3 u_light_target;
+uniform float u_light_max_dists;
+uniform float u_light_coscutoff;
+uniform float u_light_spotexp;
+
+uniform mat4 u_inverse_viewprojection;
+
+
+uniform sampler2D u_shadowmap;
+uniform mat4 u_shadow_viewproj;
+uniform float u_shadow_bias;
+uniform bool u_cast_shadows;
+
+
+uniform float u_time;
+out vec4 FragColor;
+
+float getShadowFactor(bool directional, vec3 world_position)
+{
+//project our 3D position to the shadowmap
+	vec4 proj_pos = u_shadow_viewproj * vec4(world_position,1.0);
+
+	//from homogeneus space to clip space
+	vec2 shadow_uv = proj_pos.xy / proj_pos.w;
+
+	//from clip space to uv space
+	shadow_uv = shadow_uv * 0.5 + vec2(0.5);
+
+	//get point depth [-1 .. +1] in non-linear space
+	float real_depth = (proj_pos.z - u_shadow_bias) / proj_pos.w;
+
+	//normalize from [-1..+1] to [0..+1] still non-linear
+	real_depth = real_depth * 0.5 + 0.5;
+
+	//read depth from depth buffer in [0..+1] non-linear
+	float shadow_depth = texture( u_shadowmap, shadow_uv).x;
+
+	//compute final shadow factor by comparing
+	float shadow_factor = 1.0;
+
+	//we can compare them, even if they are not linear
+	if( shadow_depth < real_depth )
+		shadow_factor = 0.0;
+
+	if (directional){
+
+		if( shadow_uv.x < 0.0 || shadow_uv.x > 1.0 ||
+		shadow_uv.y < 0.0 || shadow_uv.y > 1.0 )
+			shadow_factor = 1.0;
+
+		//it is before near or behind far plane
+		if(real_depth < 0.0 || real_depth > 1.0)
+			shadow_factor = 1.0;
+
+	}
+		
+	
+	return shadow_factor;
+}
+
+void main()
+{
+	vec2 uv = v_uv; //slides frag cord posible
+	vec4 albedo = texture( u_color_texture, uv );
+	vec4 normal = texture( u_normal_texture, uv );
+	vec4 extra = texture( u_extra_texture, uv );
+	//vec4 depth = texture( u_depth_texture, uv );
+
+
+	vec3 N = normalize(normal.xyz * 2.0 - vec3(1.0));
+	float NdotL = 0.0;
+
+
+    float depth = texture( u_depth_texture, uv ).x;
+    vec4 screen_pos = vec4(uv.x*2.0-1.0, uv.y*2.0-1.0, depth*2.0-1.0, 1.0);
+    vec4 proj_worldpos = u_inverse_viewprojection * screen_pos;
+    vec3 worldpos = proj_worldpos.xyz / proj_worldpos.w;
+
+
+	vec3 L;
+
+	float att_factor = 1.0;
+	float spotFactor = 1.0;
+	float shadow_factor = 1.0;
+
+	//vec3 light = u_ambient_light;// * occlusion;
+	vec3 light = vec3(0.0);
+	vec3 D = normalize(u_light_target);
+
+	if (u_light_type == 2){
+		L = -D;
+		if (u_cast_shadows) shadow_factor = getShadowFactor(true, worldpos);
+	}
+	else{
+		L = u_light_pos - worldpos;
+		float sizeL = length(L);
+		att_factor = u_light_max_dists - sizeL;
+		att_factor /= u_light_max_dists;
+		att_factor = max( att_factor, 0.0 );
+		L /= sizeL;
+		if (u_light_type == 1){
+			if (u_cast_shadows) shadow_factor = getShadowFactor(false, worldpos);
+			if (u_light_coscutoff > 0.0) { 
+				float spotCosine = dot(D,-L);
+				if (spotCosine >= u_light_coscutoff) { 
+					spotFactor = pow(spotCosine, u_light_spotexp);
+				}
+				else{
+					spotFactor = 0.0;
+				}
+			}
+		}
+	}
+
+	NdotL = clamp( dot(L,N), 0.0, 1.0);
+
+	light += NdotL * u_light_color * att_factor * spotFactor * shadow_factor;
+
+	vec3 color = albedo.xyz * light;
+
+	FragColor = vec4(color, 1.0);
 }
 
 

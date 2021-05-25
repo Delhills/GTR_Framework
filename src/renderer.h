@@ -61,7 +61,17 @@ namespace GTR {
 
 		void render(GTR::Scene* scene, Camera* camera);
 
+<<<<<<< Updated upstream
 		void renderScene(GTR::Scene* scene, Camera* camera);
+=======
+		void collectRenderCalls(GTR::Scene* scene, Camera* camera);
+
+		void renderScene(GTR::Scene* scene, Camera* camera, ePipelineMode pipmode);
+
+		void renderForward(GTR::Scene* scene, std::vector <renderCall>& rendercalls, Camera* camera);
+
+		void renderDeferred(GTR::Scene* scene, std::vector <renderCall>& rendercalls, Camera* camera);
+>>>>>>> Stashed changes
 	
 		//to render a whole prefab (with all its nodes)
 		void renderPrefab(const Matrix44& model, GTR::Prefab* prefab, Camera* camera);

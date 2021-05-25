@@ -299,9 +299,11 @@ void Application::onKeyDown( SDL_KeyboardEvent event )
 		case SDLK_o: renderer->render_mode = GTR::eRenderMode::SHOW_TEXTURE; break;
 		case SDLK_p: renderer->render_mode = GTR::eRenderMode::DEFAULT; break;
 		case SDLK_l: renderer->render_mode = GTR::eRenderMode::SINGLE; break;
-		case SDLK_g: renderer->render_mode = GTR::eRenderMode::SHADOWMAP; break;
 		case SDLK_1: renderer->show_fbo = !renderer->show_fbo;
 		case SDLK_2: renderer->showCameraDirectional = !renderer->showCameraDirectional;
+		case SDLK_3: renderer->show_gbuffers = !renderer->show_gbuffers;
+		case SDLK_4: renderer->pipeline_mode = GTR::ePipelineMode::DEFERRED; break;
+		case SDLK_5: renderer->pipeline_mode = GTR::ePipelineMode::FORWARD; break;
 	}
 }
 
