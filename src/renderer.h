@@ -14,7 +14,12 @@ namespace GTR {
 		SHOW_OCCLUSION,
 		SHOW_UVS,
 		SINGLE,
-		SHADOWMAP
+		GBUFFERS
+	};
+	
+	enum ePipelineMode {
+		FORWARD,
+		DEFERRED
 	};
 
 	class Prefab;
@@ -38,10 +43,12 @@ namespace GTR {
 		//add here your functions
 		//...
 		FBO fbo;
+		FBO gbuffers_fbo;
 		Texture* color_buffer;
 
 		bool rendering_shadowmap;
 		eRenderMode render_mode;
+		ePipelineMode pipeline_mode;
 		eLightType light_types[5];
 		Vector3 light_position[5];
 		Vector3 light_target[5];
@@ -51,6 +58,7 @@ namespace GTR {
 		float light_spotexponent[5];
 		Vector3 light_vector[5];
 		bool show_fbo = false;
+		bool show_gbuffers = false;
 		bool showCameraDirectional = false;
 
 		Renderer();
@@ -61,9 +69,9 @@ namespace GTR {
 
 		void render(GTR::Scene* scene, Camera* camera);
 
-<<<<<<< Updated upstream
+
 		void renderScene(GTR::Scene* scene, Camera* camera);
-=======
+
 		void collectRenderCalls(GTR::Scene* scene, Camera* camera);
 
 		void renderScene(GTR::Scene* scene, Camera* camera, ePipelineMode pipmode);
@@ -71,20 +79,19 @@ namespace GTR {
 		void renderForward(GTR::Scene* scene, std::vector <renderCall>& rendercalls, Camera* camera);
 
 		void renderDeferred(GTR::Scene* scene, std::vector <renderCall>& rendercalls, Camera* camera);
->>>>>>> Stashed changes
 	
 		//to render a whole prefab (with all its nodes)
-		void renderPrefab(const Matrix44& model, GTR::Prefab* prefab, Camera* camera);
+		void getRenderCallsFromPrefabs(const Matrix44& model, GTR::Prefab* prefab, Camera* camera);
 
 		//to render one node from the prefab and its children
-		void renderNode(const Matrix44& model, GTR::Node* node, Camera* camera);
+		void getRenderCallsFromNode(const Matrix44& prefab_model, GTR::Node* node, Camera* camera);
 
 		//to render one mesh given its material and transformation matrix
-		void renderMeshWithMaterial(const Matrix44 model, Mesh* mesh, GTR::Material* material, Camera* camera);
+		void renderMeshWithMaterial(eRenderMode mode, GTR::Scene* scene, const Matrix44 model, Mesh* mesh, GTR::Material* material, Camera* camera);
 
 		void renderSceneShadowmaps(GTR::Scene* scene);
 
-		void renderMeshInShadowMap(Material* material, Camera* camera, Matrix44 model, Mesh* mesh);
+		void renderMeshInShadowMap(Material* material, Camera* camera, Matrix44 model, Mesh* mesh, Texture* texture);
 
 		void renderToFbo(GTR::Scene* scene, GTR::LightEntity* light);
 		//void renderToFbo(GTR::Scene* scene, Camera* camera);

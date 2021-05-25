@@ -10,7 +10,6 @@ GTR::Scene* GTR::Scene::instance = NULL;
 GTR::Scene::Scene()
 {
 	instance = this;
-
 }
 
 void GTR::Scene::clear()
@@ -52,7 +51,7 @@ bool GTR::Scene::load(const char* filename)
 
 	//read global properties
 	background_color = readJSONVector3(json, "background_color", background_color);
-	ambient_light = readJSONVector3(json, "ambient_light", ambient_light );
+	ambient_light = readJSONVector3(json, "ambient_light", ambient_light);
 	main_camera.eye = readJSONVector3(json, "camera_position", main_camera.eye);
 	main_camera.center = readJSONVector3(json, "camera_target", main_camera.center);
 	main_camera.fov = readJSONNumber(json, "camera_fov", main_camera.fov);
@@ -108,7 +107,7 @@ bool GTR::Scene::load(const char* filename)
 			ent->model.scale(scale.x, scale.y, scale.z);
 		}
 
-		ent->configure(entity_json);
+		ent->configure(instance, entity_json);
 	}
 
 	//free memory
@@ -123,7 +122,7 @@ GTR::BaseEntity* GTR::Scene::createEntity(std::string type)
 		return new GTR::PrefabEntity();
 	if (type == "LIGHT")
 		return new GTR::LightEntity();
-    return NULL;
+	return NULL;
 }
 
 void GTR::BaseEntity::renderInMenu()
@@ -145,12 +144,12 @@ GTR::PrefabEntity::PrefabEntity()
 	prefab = NULL;
 }
 
-void GTR::PrefabEntity::configure(cJSON* json)
+void GTR::PrefabEntity::configure(GTR::Scene* scene, cJSON* json)
 {
 	if (cJSON_GetObjectItem(json, "filename"))
 	{
 		filename = cJSON_GetObjectItem(json, "filename")->valuestring;
-		prefab = GTR::Prefab::Get( (std::string("data/") + filename).c_str());
+		prefab = GTR::Prefab::Get((std::string("data/") + filename).c_str());
 	}
 }
 
@@ -174,10 +173,8 @@ GTR::LightEntity::LightEntity()
 	fbo = NULL;
 }
 
-void GTR::LightEntity::configure(cJSON* json)
+void GTR::LightEntity::configure(GTR::Scene* scene, cJSON* json)
 {
-	GTR::Scene* scene = GTR::Scene::instance;
-
 	std::string lighttype = readJSONString(json, "lighttype", "point");
 
 	if (lighttype == "point") light_type = GTR::eLightType::POINT;
@@ -214,7 +211,7 @@ void GTR::LightEntity::configure(cJSON* json)
 		Vector3 lightpos = model.getTranslation();
 		if (cast_shadows) {
 			camera.lookAt(lightpos, lightpos + model.frontVector(), Vector3(0, 1.001, 0));
-			camera.setOrthographic(-area_size, area_size, -area_size, area_size, 0.1f, 5000.f);
+			camera.setOrthographic(-area_size, area_size, -area_size, area_size, -500, max_distance);
 		}
 	}
 
@@ -234,6 +231,7 @@ void GTR::LightEntity::renderInMenu()
 	{
 		ImGui::SliderFloat("Cone angle", &cone_angle, 0, 89);
 		ImGui::SliderFloat("Spot exponent", &spot_exponent, 0, 100);
+		ImGui::SliderFloat("Shadow bias", &shadow_bias, -1.00000, 1.00000);
 		Vector3 lightpos = model.getTranslation();
 		//camera.lookAt(lightpos, lightpos + this->model.frontVector(), Vector3(0, 1.001, 0));
 		camera.lookAt(lightpos, lightpos + model.frontVector(), model.topVector());
