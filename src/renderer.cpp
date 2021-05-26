@@ -48,7 +48,7 @@ void Renderer::render(GTR::Scene* scene, Camera* camera) {
 	}
 	else {
 		//renderToFbo(scene, camera, &fbo);
-		renderScene(scene, camera);
+		renderScene(scene, camera, pipeline_mode);
 	}
 
 }
@@ -81,7 +81,7 @@ void Renderer::renderDeferred(GTR::Scene* scene, std::vector <renderCall>& rende
 							h,
 							3,
 							GL_RGBA,
-							GL_UNSIGNED_BYTE);
+							GL_FLOAT);
 	}
 
 	gbuffers_fbo.bind();
@@ -99,6 +99,55 @@ void Renderer::renderDeferred(GTR::Scene* scene, std::vector <renderCall>& rende
 	
 	gbuffers_fbo.unbind();
 
+	glClearColor(0, 0, 0, 0);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	glDisable(GL_DEPTH_TEST);
+	glDisable(GL_BLEND);
+
+	Mesh* quad = Mesh::getQuad();
+	Shader* shader = Shader::Get("deferred");
+	shader->enable();
+	Matrix44 inv_vp = camera->viewprojection_matrix;
+	inv_vp.inverse();
+
+	shader->setUniform("u_inverse_viewprojection", inv_vp);
+
+	shader->setTexture("u_color_texture", gbuffers_fbo.color_textures[0], 0);
+	shader->setTexture("u_normal_texture", gbuffers_fbo.color_textures[1], 1);
+	shader->setTexture("u_extra_texture", gbuffers_fbo.color_textures[2], 2);
+	shader->setTexture("u_depth_texture", gbuffers_fbo.depth_texture, 3);
+	shader->setUniform("u_ambient_light", scene->ambient_light);
+
+	//LightEntity* light = scene->lights[0];
+	for (size_t i = 0; i < scene->lights.size(); i++)
+	{
+		LightEntity* light = scene->lights[i];
+		//light set uniform
+
+		Texture* shadowmap = light->fbo->depth_texture;
+		if (light->cast_shadows)
+		{
+			shader->setTexture("u_shadowmap", shadowmap, 4);
+			shader->setUniform("u_shadow_viewproj", light->camera.viewprojection_matrix);
+			shader->setUniform("u_shadow_bias", clamp(light->shadow_bias, 0.015, 1.0));
+		}
+
+		shader->setUniform("u_cast_shadows", (int)light->cast_shadows);
+
+		shader->setUniform("u_light_type", light->light_type);
+		shader->setUniform("u_light_pos", light->model.getTranslation());
+		shader->setUniform("u_light_target", light->model.frontVector());
+		shader->setUniform("u_light_color", light->color * light->intensity);
+		shader->setUniform("u_light_max_dists", light->max_distance);
+		shader->setUniform("u_light_coscutoff", (float)cos((light->cone_angle / 180.0) * PI));
+		shader->setUniform("u_light_spotexp", light->spot_exponent);
+
+		quad->render(GL_TRIANGLES);
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_ONE, GL_ONE);
+	}
+	glDisable(GL_BLEND);
 
 	if (show_gbuffers) {
 
@@ -165,13 +214,14 @@ void Renderer::collectRenderCalls(GTR::Scene* scene, Camera* camera) {
 	std::sort(renderCallList.begin(), renderCallList.end(), compareNodes);
 }
 
-void Renderer::renderScene(GTR::Scene* scene, Camera* camera)
+
+void Renderer::renderScene(GTR::Scene* scene, Camera* camera, ePipelineMode pipmode)
 {
 	collectRenderCalls(scene, camera);
 
-	if (pipeline_mode == FORWARD)
+	if (pipmode == FORWARD)
 		renderForward(scene, renderCallList, camera);
-	else if (pipeline_mode == DEFERRED)
+	else if (pipmode == DEFERRED)
 		renderDeferred(scene, renderCallList, camera);
 }
 
@@ -446,7 +496,7 @@ void Renderer::renderSceneShadowmaps(GTR::Scene* scene)
 		Camera* light_cam = &light->camera;
 
 		//light_cam->enable();
-		renderScene(scene, light_cam);
+		renderScene(scene, light_cam, FORWARD);
 
 		light->fbo->unbind();
 		glColorMask(true, true, true, true);

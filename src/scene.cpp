@@ -51,7 +51,7 @@ bool GTR::Scene::load(const char* filename)
 
 	//read global properties
 	background_color = readJSONVector3(json, "background_color", background_color);
-	ambient_light = readJSONVector3(json, "ambient_light", ambient_light );
+	ambient_light = readJSONVector3(json, "ambient_light", ambient_light);
 	main_camera.eye = readJSONVector3(json, "camera_position", main_camera.eye);
 	main_camera.center = readJSONVector3(json, "camera_target", main_camera.center);
 	main_camera.fov = readJSONNumber(json, "camera_fov", main_camera.fov);
@@ -122,7 +122,7 @@ GTR::BaseEntity* GTR::Scene::createEntity(std::string type)
 		return new GTR::PrefabEntity();
 	if (type == "LIGHT")
 		return new GTR::LightEntity();
-    return NULL;
+	return NULL;
 }
 
 void GTR::BaseEntity::renderInMenu()
@@ -149,7 +149,7 @@ void GTR::PrefabEntity::configure(GTR::Scene* scene, cJSON* json)
 	if (cJSON_GetObjectItem(json, "filename"))
 	{
 		filename = cJSON_GetObjectItem(json, "filename")->valuestring;
-		prefab = GTR::Prefab::Get( (std::string("data/") + filename).c_str());
+		prefab = GTR::Prefab::Get((std::string("data/") + filename).c_str());
 	}
 }
 
@@ -231,6 +231,7 @@ void GTR::LightEntity::renderInMenu()
 	{
 		ImGui::SliderFloat("Cone angle", &cone_angle, 0, 89);
 		ImGui::SliderFloat("Spot exponent", &spot_exponent, 0, 100);
+		ImGui::SliderFloat("Shadow bias", &shadow_bias, -1.00000, 1.00000);
 		Vector3 lightpos = model.getTranslation();
 		//camera.lookAt(lightpos, lightpos + this->model.frontVector(), Vector3(0, 1.001, 0));
 		camera.lookAt(lightpos, lightpos + model.frontVector(), model.topVector());
@@ -238,7 +239,7 @@ void GTR::LightEntity::renderInMenu()
 	if (light_type == GTR::eLightType::DIRECTIONAL)
 	{
 		ImGui::SliderFloat("Area size", &area_size, 0, 2000);
-		ImGui::SliderFloat("Shadow bias", &shadow_bias, -1.00000, 1.00000);
+		ImGui::SliderFloat("Shadow bias", &shadow_bias, 0.00000, 1.00000);
 		Vector3 lightpos = model.getTranslation();
 		//camera.lookAt(lightpos, lightpos + this->model.frontVector(), Vector3(0, 1.001, 0));
 		camera.lookAt(lightpos, lightpos + model.frontVector(), model.topVector());

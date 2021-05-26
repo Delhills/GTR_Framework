@@ -16,7 +16,7 @@ namespace GTR {
 		SINGLE,
 		GBUFFERS
 	};
-
+	
 	enum ePipelineMode {
 		FORWARD,
 		DEFERRED
@@ -47,10 +47,8 @@ namespace GTR {
 		Texture* color_buffer;
 
 		bool rendering_shadowmap;
-
 		eRenderMode render_mode;
 		ePipelineMode pipeline_mode;
-
 		eLightType light_types[5];
 		Vector3 light_position[5];
 		Vector3 light_target[5];
@@ -71,9 +69,12 @@ namespace GTR {
 
 		void render(GTR::Scene* scene, Camera* camera);
 
-		void collectRenderCalls(GTR::Scene* scene, Camera* camera);
 
 		void renderScene(GTR::Scene* scene, Camera* camera);
+
+		void collectRenderCalls(GTR::Scene* scene, Camera* camera);
+
+		void renderScene(GTR::Scene* scene, Camera* camera, ePipelineMode pipmode);
 
 		void renderForward(GTR::Scene* scene, std::vector <renderCall>& rendercalls, Camera* camera);
 
@@ -83,7 +84,7 @@ namespace GTR {
 		void getRenderCallsFromPrefabs(const Matrix44& model, GTR::Prefab* prefab, Camera* camera);
 
 		//to render one node from the prefab and its children
-		void getRenderCallsFromNode(const Matrix44& model, GTR::Node* node, Camera* camera);
+		void getRenderCallsFromNode(const Matrix44& prefab_model, GTR::Node* node, Camera* camera);
 
 		//to render one mesh given its material and transformation matrix
 		void renderMeshWithMaterial(eRenderMode mode, GTR::Scene* scene, const Matrix44 model, Mesh* mesh, GTR::Material* material, Camera* camera);
