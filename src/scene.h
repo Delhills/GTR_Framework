@@ -81,6 +81,7 @@ namespace GTR {
 
 		virtual void configure(GTR::Scene* scene, cJSON* json);
 		virtual void renderInMenu();
+		void setLightUniforms(Shader* shader, bool useshadowmap);
 
 	};
 

@@ -223,7 +223,7 @@ void GTR::LightEntity::renderInMenu()
 
 #ifndef SKIP_IMGUI
 	ImGui::ColorEdit3("Color", color.v);
-	ImGui::SliderFloat("Intensity", &intensity, 0, 10);
+	ImGui::SliderFloat("Intensity", &intensity, 0, 50);
 	ImGui::SliderFloat("Max distance", &max_distance, 0, 3700);
 	ImGui::Checkbox("cast shadow", &cast_shadows);
 
@@ -246,4 +246,28 @@ void GTR::LightEntity::renderInMenu()
 		camera.setOrthographic(-area_size, area_size, -area_size, area_size, 0.1f, 5000.f);
 	}
 #endif
+}
+
+void GTR::LightEntity::setLightUniforms(Shader* shader, bool useshadowmap)
+{
+	if (useshadowmap)
+	{
+		Texture* shadowmap = fbo->depth_texture;
+		if (cast_shadows)
+		{
+			shader->setTexture("u_shadowmap", shadowmap, 4);
+			shader->setUniform("u_shadow_viewproj", camera.viewprojection_matrix);
+			shader->setUniform("u_shadow_bias", clamp(shadow_bias, 0.015, 1.0));
+		}
+		shader->setUniform("u_cast_shadows", (int)cast_shadows);
+	}
+
+
+	shader->setUniform("u_light_type", light_type);
+	shader->setUniform("u_light_pos", model.getTranslation());
+	shader->setUniform("u_light_target", model.frontVector());
+	shader->setUniform("u_light_color", color * intensity);
+	shader->setUniform("u_light_max_dists", max_distance);
+	shader->setUniform("u_light_coscutoff", (float)cos((cone_angle / 180.0) * PI));
+	shader->setUniform("u_light_spotexp", spot_exponent);
 }
