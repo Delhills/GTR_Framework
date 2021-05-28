@@ -462,8 +462,8 @@ void main()
 	vec3 metallic_roughness = texture2D(u_metallic_roughness_texture, v_uv ).xyz;
 
 	float occlusion = metallic_roughness.x;
-	float metalness = metallic_roughness.y * u_metallic_factor;
-	float roughness = metallic_roughness.z * u_roughness_factor;
+	float roughness = metallic_roughness.y * u_roughness_factor;
+	float metalness = metallic_roughness.z * u_metallic_factor;
 
 	vec3 emmisive = u_emissive_factor * texture(u_emmisive_texture, v_uv).xyz;
 
@@ -495,13 +495,6 @@ float D_GGX ( const in float NoH, const in float linearRoughness )
     return a2 / (PI * f * f);
 }
 
-// Fresnel term with scalar optimization(f90=1)
-//float F_Schlick( const in float VoH, const in float f0)
-//{
-//    float f = pow(1.0 - VoH, 5.0);
-//    return f0 + (1.0 - f0) * f;
-//}
-
 // Fresnel term with colorized fresnel
 vec3 F_Schlick( const in float VoH, const in vec3 f0)
 {
@@ -509,6 +502,7 @@ vec3 F_Schlick( const in float VoH, const in vec3 f0)
     return f0 + (vec3(1.0) - f0) * f;
 }
 
+//From filament: https://google.github.io/filament/Filament.md.html#materialsystem/diffusebrdf
 float F_Schlick(float u, float f0, float f90) {
     return f0 + (f90 - f0) * pow(1.0 - u, 5.0);
 }
@@ -595,6 +589,9 @@ void main()
 	vec4 normal = texture( u_normal_texture, uv );
 	vec4 extra = texture( u_extra_texture, uv );
 	//vec4 depth = texture( u_depth_texture, uv );
+	float metalness = normal.a;
+	float roughness = albedo.a;
+	float occlusion = extra.a;
 
 
 	vec3 N = normalize(normal.xyz * 2.0 - vec3(1.0));
@@ -650,27 +647,26 @@ void main()
 	vec3 V = normalize(u_camera_pos - worldpos);
 	vec3 H = normalize(V+L);
 
-	float NdotH = clamp( dot(N,H), 0.0, 1.0);
-	float NdotV = clamp( dot(N,V), 0.0, 1.0);
-	float LdotH = clamp( dot(L,H), 0.0, 1.0);
+	float NdotH = clamp( dot(H,N), 0.0, 1.0);
+	float NdotV = clamp( dot(V,N), 0.0, 1.0);
+	float LdotH = clamp( dot(H,L), 0.0, 1.0);
 
 	//light += NdotL * u_light_color * att_factor * spotFactor * shadow_factor;
 
 
 	//we compute the reflection in base to the color and the metalness
-	vec3 f0 = mix( vec3(0.5), albedo.xyz, normal.a );
+	vec3 f0 = mix( vec3(0.5), albedo.xyz, metalness);
 
 	//metallic materials do not have diffuse
-	vec3 diffuseColor = (1.0 - normal.a) * albedo.xyz;
+	vec3 diffuseColor = (1.0 - metalness) * albedo.xyz;
 
 	//compute the specular
-	vec3 Fr_d = specularBRDF(  albedo.a, f0, NdotH, NdotV, NdotL, LdotH);
+	vec3 Fr_d = specularBRDF(  roughness, f0, NdotH, NdotV, NdotL, LdotH);
 
 	// Here we use the Burley, but you can replace it by the Lambert.
 	// linearRoughness = squared roughness
-	vec3 Fd_d = diffuseColor * Fd_Burley(NdotV,NdotL,LdotH,(albedo.a*albedo.a)); 
+	vec3 Fd_d = diffuseColor * Fd_Burley(NdotV,NdotL,LdotH,(roughness*roughness)); 
 
-	//add diffuse and specular reflection
 	vec3 direct = Fr_d + Fd_d;
 
 	//compute how much light received the pixel

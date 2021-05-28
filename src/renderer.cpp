@@ -369,6 +369,7 @@ void Renderer::renderMeshWithMaterial(eRenderMode mode, GTR::Scene* scene, const
 	if (mode == GBUFFERS) {
 		shader->setUniform("u_roughness_factor", material->roughness_factor);
 		shader->setUniform("u_metallic_factor", material->metallic_factor);
+		//std::cout << "metallicf: " << material->metallic_factor << " roughnessf: " << material->roughness_factor << "\n";
 	}
 
 	//this is used to say which is the alpha threshold to what we should not paint a pixel on the screen (to cut polygons according to texture alpha)
