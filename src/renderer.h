@@ -33,6 +33,21 @@ namespace GTR {
 		float distance_to_cam;
 	};
 
+
+	class SSAOFX {
+	public:
+		float intensity;
+
+		std::vector<Vector3> points;
+
+		SSAOFX();
+
+		void blurTexture(Texture* input, Texture* output);
+		void apply(Texture* depth_buffer, Texture* normal_buffer, Camera* cam, Texture* output);
+	};
+
+
+	std::vector<Vector3> generateSpherePoints(int num, float radius, bool hemi);
 	// This class is in charge of rendering anything in our system.
 	// Separating the render from anything else makes the code cleaner
 	class Renderer
@@ -44,7 +59,7 @@ namespace GTR {
 		//...
 		FBO fbo;
 		FBO gbuffers_fbo;
-		Texture* color_buffer;
+		FBO final_fbo;
 
 		bool rendering_shadowmap;
 		eRenderMode render_mode;
@@ -57,9 +72,19 @@ namespace GTR {
 		float light_coscutoff[5];
 		float light_spotexponent[5];
 		Vector3 light_vector[5];
+		bool hdr = true;
 		bool show_fbo = false;
 		bool show_gbuffers = false;
 		bool showCameraDirectional = false;
+		bool show_ao_buffer = false;
+
+		float average_lum;
+		float lum_white;
+		float scale_tm;
+
+		Texture* ao_buffer = NULL;
+		Texture* ao_blur_buffer = NULL;
+		SSAOFX ssao;
 
 		Renderer();
 
@@ -68,7 +93,6 @@ namespace GTR {
 		void addRenderCalltoList(const Matrix44 model, Mesh* mesh, GTR::Material* material, Camera* camera, float dist);
 
 		void render(GTR::Scene* scene, Camera* camera);
-
 
 		void renderScene(GTR::Scene* scene, Camera* camera);
 

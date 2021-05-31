@@ -15,10 +15,21 @@
 using namespace GTR;
 
 Renderer::Renderer() {
+	int w = Application::instance->window_width;
+	int h = Application::instance->window_height;
+
+	average_lum = 1.0;
+	lum_white = 1.0;
+	scale_tm = 1.0;
 
 	render_mode = eRenderMode::DEFAULT;
 	pipeline_mode = ePipelineMode::DEFERRED;
-
+	fbo.create(w,
+				h,
+				1,
+				GL_RGBA,
+				GL_FLOAT,
+				false);
 }
 
 void Renderer::addRenderCalltoList(const Matrix44 model, Mesh* mesh, GTR::Material* material, Camera* camera, float dist) {
@@ -74,8 +85,7 @@ void Renderer::renderDeferred(GTR::Scene* scene, std::vector <renderCall>& rende
 	
 	int w = Application::instance->window_width;
 	int h = Application::instance->window_height;
-
-
+	
 	if (gbuffers_fbo.fbo_id == 0) {
 		gbuffers_fbo.create(w, 
 							h,
@@ -83,7 +93,6 @@ void Renderer::renderDeferred(GTR::Scene* scene, std::vector <renderCall>& rende
 							GL_RGBA,
 							GL_FLOAT);
 	}
-
 	gbuffers_fbo.bind();
 
 	glClearColor(scene->background_color.x, scene->background_color.y, scene->background_color.z, 1.0);
@@ -99,39 +108,109 @@ void Renderer::renderDeferred(GTR::Scene* scene, std::vector <renderCall>& rende
 	
 	gbuffers_fbo.unbind();
 
-	glClearColor(scene->background_color.x, scene->background_color.y, scene->background_color.z, 1.0);
+
+	if (!ao_buffer)
+		ao_buffer = new Texture(w, h, GL_LUMINANCE, GL_UNSIGNED_BYTE);
+
+	if (!ao_blur_buffer)
+		ao_blur_buffer = new Texture(w, h, GL_LUMINANCE, GL_UNSIGNED_BYTE);
+
+	ssao.apply(gbuffers_fbo.depth_texture, gbuffers_fbo.color_textures[1], camera, ao_buffer);
+	ssao.blurTexture(ao_buffer, ao_blur_buffer);
+
+	fbo.bind();
+	//gbuffers_fbo.depth_texture->copyTo(fbo.depth_texture);
+	glClearColor(0, 0, 0, 0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	checkGLErrors();
 
-	glDisable(GL_DEPTH_TEST);
 	glDisable(GL_BLEND);
+	glDisable(GL_DEPTH_TEST);
 
+
+	Mesh* mesh;
+	Shader* shader;
+
+	Mesh* sphere = Mesh::Get("data/meshes/sphere.obj", true);
 	Mesh* quad = Mesh::getQuad();
-	Shader* shader = Shader::Get("deferred");
-	shader->enable();
-	Matrix44 inv_vp = camera->viewprojection_matrix;
-	inv_vp.inverse();
+	//Shader* shaderSphere = Shader::Get("deferred_sphere");
 
-	shader->setUniform("u_camera_position", camera->eye);
-	shader->setUniform("u_inverse_viewprojection", inv_vp);
 
-	shader->setTexture("u_color_texture", gbuffers_fbo.color_textures[0], 0);
-	shader->setTexture("u_normal_texture", gbuffers_fbo.color_textures[1], 1);
-	shader->setTexture("u_extra_texture", gbuffers_fbo.color_textures[2], 2);
-	shader->setTexture("u_depth_texture", gbuffers_fbo.depth_texture, 3);
-	shader->setUniform("u_ambient_light", scene->ambient_light);
 
+	bool first_iter;
 	//LightEntity* light = scene->lights[0];
 	for (size_t i = 0; i < scene->lights.size(); i++)
 	{
-		shader->setUniform("u_first_iter", (i == 0));
 		LightEntity* light = scene->lights[i];
+		first_iter = i == 0 ? true : false;
+
+		if (light->light_type == DIRECTIONAL)
+		{
+			shader = Shader::Get("deferred");
+			shader->enable();
+			mesh = quad;
+
+		}
+		else {
+			shader = Shader::Get("deferred");
+			shader->enable();
+			mesh = quad;
+			Matrix44 m;
+			Vector3 centre = light->model.getTranslation();
+			m.setTranslation(centre.x, centre.y, centre.z);
+			m.scale(light->max_distance, light->max_distance, light->max_distance);
+			shader->setUniform("u_model", m);
+
+			//render only the backfacing triangles of the sphere
+
+		}
+		
+		shader->setUniform("u_viewprojection", camera->viewprojection_matrix);
+		Matrix44 inv_vp = camera->viewprojection_matrix;
+		inv_vp.inverse();
+		shader->setUniform("hdr", hdr);
+
+		shader->setUniform("u_camera_position", camera->eye);
+		shader->setUniform("u_inverse_viewprojection", inv_vp);
+
+		shader->setTexture("u_color_texture", gbuffers_fbo.color_textures[0], 0);
+		shader->setTexture("u_normal_texture", gbuffers_fbo.color_textures[1], 1);
+		shader->setTexture("u_extra_texture", gbuffers_fbo.color_textures[2], 2);
+		shader->setTexture("u_depth_texture", gbuffers_fbo.depth_texture, 3);
+		shader->setUniform("u_ambient_light", scene->ambient_light);
+
+		shader->setUniform("u_first_iter", first_iter);
 		//light set uniform
 
 		light->setLightUniforms(shader, true);
 
-		quad->render(GL_TRIANGLES);
+		shader->setTexture("u_ao_texture", ao_buffer, 5);
+
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_ONE, GL_ONE);
+		mesh->render(GL_TRIANGLES);
+		shader->disable();
+	}
+
+
+	glDisable(GL_BLEND);
+	glDisable(GL_DEPTH_TEST);
+
+	fbo.unbind();
+	//Shader* final_shader = Shader::Get("finalShader");
+	Shader* final_shader = Shader::Get("tonemapper");
+	final_shader->enable();
+	final_shader->setUniform("u_average_lum", average_lum);
+	final_shader->setUniform("u_lumwhite2", lum_white * lum_white);
+	final_shader->setUniform("u_scale", scale_tm);
+	
+	if (hdr) {
+		fbo.color_textures[0]->toViewport(final_shader);
+		final_shader->disable();
+	}
+	else
+	{
+		fbo.color_textures[0]->toViewport();
 	}
 	glDisable(GL_BLEND);
 
@@ -155,6 +234,8 @@ void Renderer::renderDeferred(GTR::Scene* scene, std::vector <renderCall>& rende
 
 		glViewport(0, 0, w, h);
 	}
+	if (show_ao_buffer)
+		ao_blur_buffer->toViewport();
 }
 
 
@@ -240,7 +321,7 @@ void Renderer::getRenderCallsFromNode(const Matrix44& prefab_model, GTR::Node* n
 			//render node mesh
 			//renderMeshWithMaterial( node_model, node->mesh, node->material, camera );
 			addRenderCalltoList(node_model, node->mesh, node->material, camera, camera->eye.distance(world_bounding.center)); //uso el centro de la bounding box para la distancia,
-																															  //el resto es de la llamada normal, el alpha va en el material
+						  //el resto es de la llamada normal, el alpha va en el material
 			//node->mesh->renderBounding(node_model, true);
 		}
 	}
@@ -293,7 +374,7 @@ void Renderer::renderMeshWithMaterial(eRenderMode mode, GTR::Scene* scene, const
 	//select the blending
 	if (material->alpha_mode == GTR::eAlphaMode::BLEND)
 	{
-		if (mode == GBUFFERS) return;
+		//if (mode == GBUFFERS) return;
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	}
@@ -483,7 +564,84 @@ void Renderer::renderSceneShadowmaps(GTR::Scene* scene)
 	rendering_shadowmap = false;
 }
 
+GTR::SSAOFX::SSAOFX() {
+	points = generateSpherePoints(64, 10.0, true);
+	intensity = 1.0f;
+}
 
+void GTR::SSAOFX::blurTexture(Texture* input, Texture* output)
+{
+	FBO* fbo = Texture::getGlobalFBO(output);
+	fbo->bind();
+
+	Mesh* quad = Mesh::getQuad();
+	Shader* sh = Shader::Get("blur");
+
+	glDisable(GL_DEPTH_TEST);
+	glDisable(GL_BLEND);
+
+	sh->enable();
+	sh->setTexture("ssaoInput", input, 9);
+	quad->render(GL_TRIANGLES);
+	sh->disable();
+
+	fbo->unbind();
+}
+
+void GTR::SSAOFX::apply(Texture* depth_buffer, Texture* normal_buffer, Camera* cam, Texture* output) {
+
+	FBO* fbo = Texture::getGlobalFBO(output);
+	fbo->bind();
+
+	Matrix44 innvp = cam->viewprojection_matrix;
+	innvp.inverse();
+
+	Mesh* quad = Mesh::getQuad();
+
+	glDisable(GL_DEPTH_TEST);
+	glDisable(GL_BLEND);
+
+	Shader* sh = Shader::Get("ssao");
+	sh->enable();
+	sh->setUniform("u_inverse_viewprojection", innvp);
+	sh->setUniform("u_iRes", Vector2(1.0 / (float)depth_buffer->width, 1.0 / (float)depth_buffer->height));
+	sh->setUniform3Array("u_points", points[0].v, points.size());
+
+	sh->setUniform("u_viewprojection", cam->viewprojection_matrix);
+	sh->setTexture("u_normal_texture", normal_buffer, 1);
+	sh->setTexture("u_depth_texture", depth_buffer, 3);
+	quad->render(GL_TRIANGLES);
+
+	sh->disable();
+
+	fbo->unbind();
+}
+
+std::vector<Vector3> GTR::generateSpherePoints(int num,
+	float radius, bool hemi)
+{
+	std::vector<Vector3> points;
+	points.resize(num);
+	for (int i = 0; i < num; i += 3)
+	{
+		Vector3& p = points[i];
+		float u = random();
+		float v = random();
+		float theta = u * 2.0 * PI;
+		float phi = acos(2.0 * v - 1.0);
+		float r = cbrt(random() * 0.9 + 0.1) * radius;
+		float sinTheta = sin(theta);
+		float cosTheta = cos(theta);
+		float sinPhi = sin(phi);
+		float cosPhi = cos(phi);
+		p.x = r * sinPhi * cosTheta;
+		p.y = r * sinPhi * sinTheta;
+		p.z = r * cosPhi;
+		if (hemi && p.z < 0)
+			p.z *= -1.0;
+	}
+	return points;
+}
 
 Texture* GTR::CubemapFromHDRE(const char* filename)
 {

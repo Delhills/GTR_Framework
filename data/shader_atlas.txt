@@ -11,6 +11,11 @@ occlusion basic.vs occlusion.fs
 multipasslight basic.vs multipasslight.fs
 gbuffers basic.vs gbuffers.fs
 deferred quad.vs deferred.fs
+finalShader quad.vs finalShader.fs
+tonemapper quad.vs tonemapper.fs
+deferred_sphere basic.vs deferred.fs
+ssao quad.vs ssao.fs
+blur quad.vs blur.fs
 
 \basic.vs
 
@@ -415,9 +420,40 @@ void main()
 	FragColor = color;
 }
 
+\dithering
+float dither4x4(vec2 position, float brightness)
+{
+  int x = int(mod(position.x, 4.0));
+  int y = int(mod(position.y, 4.0));
+  int index = x + y * 4;
+  float limit = 0.0;
+
+  if (x < 8) {
+    if (index == 0) limit = 0.0625;
+    if (index == 1) limit = 0.5625;
+    if (index == 2) limit = 0.1875;
+    if (index == 3) limit = 0.6875;
+    if (index == 4) limit = 0.8125;
+    if (index == 5) limit = 0.3125;
+    if (index == 6) limit = 0.9375;
+    if (index == 7) limit = 0.4375;
+    if (index == 8) limit = 0.25;
+    if (index == 9) limit = 0.75;
+    if (index == 10) limit = 0.125;
+    if (index == 11) limit = 0.625;
+    if (index == 12) limit = 1.0;
+    if (index == 13) limit = 0.5;
+    if (index == 14) limit = 0.875;
+    if (index == 15) limit = 0.375;
+  }
+
+  return brightness < limit ? 0.0 : 1.0;
+}
+
 \gbuffers.fs
 
 #version 330 core
+#include "dithering"
 
 in vec3 v_position;
 in vec3 v_world_position;
@@ -447,7 +483,7 @@ layout(location = 1) out vec4 NormalColor;
 layout(location = 2) out vec4 ExtraColor;
 layout(location = 3) out vec4 occlusion;
 
-#include "computeNormal"
+
 
 void main()
 {
@@ -455,7 +491,7 @@ void main()
 	vec4 color = u_color;
 	color *= texture( u_texture, v_uv );
 
-	if(color.a < u_alpha_cutoff)
+	if(color.a < 0.9 && dither4x4( gl_FragCoord.xy, color.a) == 0.0)
 		discard;
 
 	
@@ -468,9 +504,6 @@ void main()
 	vec3 emmisive = u_emissive_factor * texture(u_emmisive_texture, v_uv).xyz;
 
 	vec3 N = normalize( v_normal );
-	vec3 normal_uv = texture2D(u_normalmap,v_uv).xyz;
-	N = perturbNormal(N, v_world_position, v_uv, normal_uv);
-
 	FragColor = vec4(color.xyz, roughness);
 	NormalColor = vec4(N * 0.5 + vec3(0.5), metalness);
 	ExtraColor = vec4(emmisive, occlusion);//vec4(v_world_position, 1.0);
@@ -544,6 +577,19 @@ float Fd_Burley ( const in float NoV, const in float NoL, const in float LoH, co
 }
 
 
+\hdr
+vec3 degamma(vec3 c)
+{
+	return pow(c,vec3(2.2));
+}
+
+vec3 gamma(vec3 c)
+{
+	return pow(c,vec3(1.0/2.2));;
+}
+
+
+
 \deferred.fs
 #version 330 core
 
@@ -553,9 +599,10 @@ uniform sampler2D u_color_texture;
 uniform sampler2D u_normal_texture;
 uniform sampler2D u_extra_texture;
 uniform sampler2D u_depth_texture;
+uniform sampler2D u_ao_texture;
 
 
-uniform vec3 u_ambient_light; //pasar a funcion!!!!!!!!!!!
+uniform vec3 u_ambient_light; 
 
 uniform int u_light_type;
 uniform vec3 u_light_pos;
@@ -565,7 +612,7 @@ uniform float u_light_max_dists;
 uniform float u_light_coscutoff;
 uniform float u_light_spotexp;
 
-uniform vec3 u_camera_pos;
+uniform vec3 u_camera_position;
 uniform mat4 u_inverse_viewprojection;
 
 uniform sampler2D u_shadowmap;
@@ -573,6 +620,7 @@ uniform mat4 u_shadow_viewproj;
 uniform float u_shadow_bias;
 uniform bool u_cast_shadows;
 uniform bool u_first_iter;
+uniform bool hdr;
 
 
 uniform float u_time;
@@ -580,18 +628,39 @@ out vec4 FragColor;
 
 #include "computeShadowFactor"
 #include "computePBR"
+#include "hdr"
+
+// #include "computeNormal"
+// vec3 normal_uv = texture2D(u_normalmap,v_uv).xyz;
+// N = perturbNormal(N, v_world_position, v_uv, normal_uv);
 
 
 void main()
 {
 	vec2 uv = v_uv; //slides frag cord posible
 	vec4 albedo = texture( u_color_texture, uv );
+
+
 	vec4 normal = texture( u_normal_texture, uv );
 	vec4 extra = texture( u_extra_texture, uv );
+	vec4 ao = texture( u_ao_texture, uv );
+
+	vec3 linearAlbedo;
+	vec3 linearEmmisive;
+	if(hdr){
+		linearAlbedo = degamma(albedo.xyz);
+		linearEmmisive = degamma(extra.xyz);
+	}
+	else{
+		linearAlbedo = albedo.xyz;
+		linearEmmisive = extra.xyz;
+	};
+
+
 	//vec4 depth = texture( u_depth_texture, uv );
 	float metalness = normal.a;
 	float roughness = albedo.a;
-	float occlusion = extra.a;
+	float occlusion = ao.x;
 
 
 	vec3 N = normalize(normal.xyz * 2.0 - vec3(1.0));
@@ -613,9 +682,14 @@ void main()
 	//vec3 light = u_ambient_light;// * occlusion;
 	vec3 light = vec3(0.0);
 	if(u_first_iter){
-		light += u_ambient_light;
+		if(hdr){
+			light += degamma(u_ambient_light);
+		}
+		else{
+			light += u_ambient_light;
+		};
 	}
-	light *= extra.a;
+	light *= occlusion;
 	vec3 D = normalize(u_light_target);
 
 	if (u_light_type == 2){
@@ -644,45 +718,60 @@ void main()
 	}
 
 	NdotL = clamp( dot(L,N), 0.0, 1.0);
-	vec3 V = normalize(u_camera_pos - worldpos);
+	vec3 V = normalize(u_camera_position - worldpos);
 	vec3 H = normalize(V+L);
 
 	float NdotH = clamp( dot(H,N), 0.0, 1.0);
 	float NdotV = clamp( dot(V,N), 0.0, 1.0);
 	float LdotH = clamp( dot(H,L), 0.0, 1.0);
 
-	//light += NdotL * u_light_color * att_factor * spotFactor * shadow_factor;
 
 
 	//we compute the reflection in base to the color and the metalness
-	vec3 f0 = mix( vec3(0.5), albedo.xyz, metalness);
+	vec3 f0 = mix( vec3(0.5), linearAlbedo, metalness);
 
 	//metallic materials do not have diffuse
-	vec3 diffuseColor = (1.0 - metalness) * albedo.xyz;
+	vec3 diffuseColor = (1.0 - metalness) * linearAlbedo;
 
 	//compute the specular
-	vec3 Fr_d = specularBRDF(  roughness, f0, NdotH, NdotV, NdotL, LdotH);
+	vec3 Fr_d = NdotL * specularBRDF(  roughness, f0, NdotH, NdotV, NdotL, LdotH);
 
 	// Here we use the Burley, but you can replace it by the Lambert.
 	// linearRoughness = squared roughness
-	vec3 Fd_d = diffuseColor * Fd_Burley(NdotV,NdotL,LdotH,(roughness*roughness)); 
-
+	//vec3 Fd_d = diffuseColor * Fd_Burley(NdotV,NdotL,LdotH,(roughness*roughness)); 
+	vec3 Fd_d = diffuseColor * NdotL;
 	vec3 direct = Fr_d + Fd_d;
 
 	//compute how much light received the pixel
-	vec3 lightParams = u_light_color * att_factor *	shadow_factor * spotFactor;
+
+	vec3 lightParams;
+
+	if(hdr){
+		lightParams = degamma(u_light_color) * att_factor * shadow_factor * spotFactor;
+	}
+	else{
+		lightParams = u_light_color * att_factor * shadow_factor * spotFactor;
+	};
+	light += direct * lightParams;
+	 
+	// if(hdr){
+	// 	light += NdotL * degamma(u_light_color) * att_factor * spotFactor * shadow_factor;
+	// }
+	// else{
+	// 	light += NdotL * u_light_color * att_factor * spotFactor * shadow_factor;
+	// };
 
 	//modulate direct light by light received
-	light += direct * lightParams;
 
 
 
-	vec3 color = albedo.xyz * light;
+	vec3 color = linearAlbedo * light;
 	if(u_first_iter){
-		color += extra.xyz;
+		color += linearEmmisive;
 	}
 
 	FragColor = vec4(color, 1.0);
+	//FragColor = vec4(V, 1.0);
 }
 
 
@@ -799,6 +888,56 @@ void main()
 }
 
 
+\finalShader.fs
+
+#version 330 core
+
+#include "hdr"
+
+in vec2 v_uv;
+
+uniform sampler2D u_texture;
+out vec4 FragColor;
+
+void main()
+{
+	vec2 uv = v_uv;
+	vec4 color = texture(u_texture,uv);
+	color.xyz = gamma(color.xyz);
+	FragColor = color;
+}
+
+
+\tonemapper.fs
+
+#version 330 core
+#include "hdr"
+
+in vec2 v_uv;
+
+uniform sampler2D u_texture; //depth map
+uniform float u_average_lum; //	average_lum = 1.0;
+uniform float u_lumwhite2; //	lum_white = 1.0;
+uniform float u_scale; //	scale_tm = 1.0;
+out vec4 FragColor;
+
+void main() {
+	vec2 uv = v_uv;
+	vec4 color = texture2D( u_texture, uv );
+	vec3 rgb = color.xyz;
+
+	float lum = dot(rgb, vec3(0.2126, 0.7152, 0.0722));
+	float L = (u_scale / u_average_lum) * lum;
+	float Ld = (L * (1.0 + L / u_lumwhite2)) / (1.0 + L);
+
+	rgb = (rgb / lum) * Ld;
+	rgb = max(rgb,vec3(0.001));
+	rgb = gamma(rgb);
+	
+	FragColor = vec4( rgb, 1.0);
+}
+
+
 \instanced.vs
 
 #version 330 core
@@ -834,3 +973,121 @@ void main()
 	//calcule the position of the vertex using the matrices
 	gl_Position = u_viewprojection * vec4( v_world_position, 1.0 );
 }
+
+\ssao.fs
+
+#version 330 core
+
+in vec2 v_uv;
+
+uniform sampler2D u_normal_texture;
+uniform sampler2D u_depth_texture;
+uniform mat4 u_viewprojection;
+
+uniform vec2 u_iRes;
+uniform mat4 u_inverse_viewprojection;
+
+#define SAMPLES 64
+
+uniform vec3 u_points[SAMPLES];
+
+out vec4 FragColor;
+
+mat3 cotangent_frame(vec3 N, vec3 p, vec2 uv)
+{
+    // get edge vectors of the pixel triangle
+    vec3 dp1 = dFdx( p );
+    vec3 dp2 = dFdy( p );
+    vec2 duv1 = dFdx( uv );
+    vec2 duv2 = dFdy( uv );
+    
+    // solve the linear system
+    vec3 dp2perp = cross( dp2, N );
+    vec3 dp1perp = cross( N, dp1 );
+    vec3 T = dp2perp * duv1.x + dp1perp * duv2.x;
+    vec3 B = dp2perp * duv1.y + dp1perp * duv2.y;
+ 
+    // construct a scale-invariant frame 
+    float invmax = inversesqrt( max( dot(T,T), dot(B,B) ) );
+    return mat3( T * invmax, B * invmax, N );
+}
+
+
+void main(){
+
+	float intensity = 1.0;
+
+	vec2 uv = v_uv + u_iRes * 0.5;
+
+	//read depth from depth buffer
+	float depth = texture( u_depth_texture, uv ).x;
+	vec3 normal = texture( u_normal_texture, uv ).xyz * 2.0 - vec3(1.0);
+
+	//ignore pixels in the background
+	if(depth >= 1.0)
+	{
+		FragColor = vec4(1.0);
+		return;
+	}
+
+	//create screenpos with the right depth
+	vec4 screen_position = vec4(uv * 2.0 - vec2(1.0), depth * 2.0 - 1.0 , 1.0);
+
+	//reproject
+	vec4 proj_worldpos = u_inverse_viewprojection * screen_position;
+	vec3 worldpos = proj_worldpos.xyz / proj_worldpos.w;
+
+	//lets use 64 samples
+	const int samples = SAMPLES;
+	int num = samples; //num samples that passed the are outside
+
+	mat3 rotmat = cotangent_frame( normal, worldpos, uv );
+
+	//for every sample around the point
+	for( int i = 0; i < samples; ++i ){
+		//compute is world position using the random
+		vec3 p = worldpos + (u_points[i] * rotmat);
+		//find the uv in the depth buffer of this point
+		vec4 proj = u_viewprojection * vec4(p,1.0);
+		proj.xy /= proj.w; //convert to clipspace from homogeneous
+		//apply a tiny bias to its z before converting to clip-space
+		proj.z = (proj.z - 0.005) / proj.w;
+		proj.xyz = proj.xyz * 0.5 + vec3(0.5); //to [0..1]
+		//read p true depth
+		float pdepth = texture( u_depth_texture, proj.xy ).x;
+		//compare true depth with its depth
+		if( pdepth < proj.z ) //if true depth smaller, is inside
+			num--; //remove this point from the list of visible
+	}
+
+	//finally, compute the AO factor as the ratio of visible points
+	float ao = float(num) / float(samples);
+
+	FragColor = vec4(ao);
+}
+
+\blur.fs
+// Sacado de https://learnopengl.com/Advanced-Lighting/SSAO
+#version 330 core
+
+out vec4 FragColor;
+  
+in vec2 v_uv;
+  
+uniform sampler2D ssaoInput;
+
+void main() {
+    vec2 texelSize = 1.0 / vec2(textureSize(ssaoInput, 0));
+    float result = 0.0;
+    for (int x = -2; x < 2; ++x) 
+    {
+        for (int y = -2; y < 2; ++y) 
+        {
+            vec2 offset = vec2(float(x), float(y)) * texelSize;
+            result += texture(ssaoInput, v_uv + offset).r;
+        }
+    }
+    result = result / (4.0 * 4.0);
+
+    FragColor = vec4(vec3(result), 1.0);	
+}  

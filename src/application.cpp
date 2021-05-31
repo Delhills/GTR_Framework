@@ -304,6 +304,8 @@ void Application::onKeyDown( SDL_KeyboardEvent event )
 		case SDLK_3: renderer->show_gbuffers = !renderer->show_gbuffers;
 		case SDLK_4: renderer->pipeline_mode = GTR::ePipelineMode::DEFERRED; break;
 		case SDLK_5: renderer->pipeline_mode = GTR::ePipelineMode::FORWARD; break;
+		case SDLK_6: renderer->hdr = !renderer->hdr;
+		case SDLK_7: renderer->show_ao_buffer = !renderer->show_ao_buffer; break;
 	}
 }
 
