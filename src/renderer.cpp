@@ -198,6 +198,10 @@ void Renderer::renderDeferred(GTR::Scene* scene, std::vector <renderCall>& rende
 	glDisable(GL_BLEND);
 	glDisable(GL_DEPTH_TEST);
 
+	sProbe probe;
+	probe.sh.coeffs[0].set(1, 0, 0);
+	renderProbe(Vector3(0, 1, 0), 2, probe.sh.coeffs[0].v);
+
 	fbo.unbind();
 	//Shader* final_shader = Shader::Get("finalShader"); //este solo aplica gamma
 	Shader* final_shader = Shader::Get("tonemapper"); //este aplica tonemapper
@@ -656,6 +660,32 @@ void GTR::Renderer::renderInMenu() {
 		}
 	}
 }
+
+
+void Renderer::renderProbe(Vector3 pos, float size, float* coeffs)
+{
+	Camera* camera = Camera::current;
+	Shader* shader = Shader::Get("probe");
+	Mesh* mesh = Mesh::Get("data/meshes/sphere.obj");
+
+	glEnable(GL_CULL_FACE);
+	glDisable(GL_BLEND);
+	glEnable(GL_DEPTH_TEST);
+
+	Matrix44 model;
+	model.setTranslation(pos.x, pos.y, pos.z);
+	model.scale(size, size, size);
+
+	shader->enable();
+	shader->setUniform("u_viewprojection",
+		camera->viewprojection_matrix);
+	shader->setUniform("u_camera_position", camera->eye);
+	shader->setUniform("u_model", model);
+	shader->setUniform3Array("u_coeffs", coeffs, 9);
+
+	mesh->render(GL_TRIANGLES);
+}
+
 
 
 Texture* GTR::CubemapFromHDRE(const char* filename)

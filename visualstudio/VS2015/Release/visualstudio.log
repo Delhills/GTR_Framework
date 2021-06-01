@@ -1,1 +1,242 @@
-﻿  visualstudio.vcxproj -> C:\Users\andre\Desktop\GTR\GTR_Framework\framework.exe
+﻿  application.cpp
+  camera.cpp
+  hdre.cpp
+  fbo.cpp
+  gltf_loader.cpp
+  input.cpp
+  main.cpp
+  mesh.cpp
+  prefab.cpp
+  renderer.cpp
+  scene.cpp
+  shader.cpp
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\scene.h(10,12): warning C4099: 'cJSON': nombre de tipo visto anteriormente usando 'struct' ahora se ve usando 'class' (compilando archivo de origen ..\..\src\input.cpp)
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\extra\cJSON.h(104): message : vea la declaración de 'cJSON' (compilando archivo de origen ..\..\src\input.cpp)
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\scene.h(10,12): warning C4099: 'cJSON': nombre de tipo visto anteriormente usando 'struct' ahora se ve usando 'class' (compilando archivo de origen ..\..\src\mesh.cpp)
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\extra\cJSON.h(104): message : vea la declaración de 'cJSON' (compilando archivo de origen ..\..\src\mesh.cpp)
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\extra\cJSON.h(105,1): warning C4099: 'cJSON': nombre de tipo visto anteriormente usando 'class' ahora se ve usando 'struct' (compilando archivo de origen ..\..\src\scene.cpp)
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\extra\cJSON.h(104): message : vea la declaración de 'cJSON' (compilando archivo de origen ..\..\src\scene.cpp)
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\input.cpp(138,24): warning C4244: '=': conversión de 'float' a 'char'; posible pérdida de datos
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\input.cpp(146,19): warning C4305: 'inicializando': truncamiento de 'double' a 'float'
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\extra\cgltf.h(771,15): warning C4996: 'fopen': This function or variable may be unsafe. Consider using fopen_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details. (compilando archivo de origen ..\..\src\gltf_loader.cpp)
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\extra\cgltf.h(1006,3): warning C4996: 'strcpy': This function or variable may be unsafe. Consider using strcpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details. (compilando archivo de origen ..\..\src\gltf_loader.cpp)
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\extra\cgltf.h(1010,3): warning C4996: 'strcpy': This function or variable may be unsafe. Consider using strcpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details. (compilando archivo de origen ..\..\src\gltf_loader.cpp)
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\extra\cgltf.h(1005,3): warning C4996: 'strncpy': This function or variable may be unsafe. Consider using strncpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details. (compilando archivo de origen ..\..\src\gltf_loader.cpp)
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\extra\cgltf.h(1415,3): warning C4996: 'strncpy': This function or variable may be unsafe. Consider using strncpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details. (compilando archivo de origen ..\..\src\gltf_loader.cpp)
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\extra\cgltf.h(1420,3): warning C4996: 'strncpy': This function or variable may be unsafe. Consider using strncpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details. (compilando archivo de origen ..\..\src\gltf_loader.cpp)
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\mesh.cpp(496,1): warning C4005: 'glGenBuffersARB': redefinición de macro
+C:\Users\andre\Desktop\GTR\GTR_Framework\visualstudio\libs\include\GL\glew.h(7631): message : vea la definición anterior de 'glGenBuffersARB' (compilando archivo de origen ..\..\src\mesh.cpp)
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\mesh.cpp(497,1): warning C4005: 'glBindBufferARB': redefinición de macro
+C:\Users\andre\Desktop\GTR\GTR_Framework\visualstudio\libs\include\GL\glew.h(7627): message : vea la definición anterior de 'glBindBufferARB' (compilando archivo de origen ..\..\src\mesh.cpp)
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\mesh.cpp(498,1): warning C4005: 'glBufferDataARB': redefinición de macro
+C:\Users\andre\Desktop\GTR\GTR_Framework\visualstudio\libs\include\GL\glew.h(7628): message : vea la definición anterior de 'glBufferDataARB' (compilando archivo de origen ..\..\src\mesh.cpp)
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\mesh.cpp(499,1): warning C4005: 'GL_ARRAY_BUFFER_ARB': redefinición de macro
+C:\Users\andre\Desktop\GTR\GTR_Framework\visualstudio\libs\include\GL\glew.h(7582): message : vea la definición anterior de 'GL_ARRAY_BUFFER_ARB' (compilando archivo de origen ..\..\src\mesh.cpp)
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\mesh.cpp(500,1): warning C4005: 'GL_STATIC_DRAW_ARB': redefinición de macro
+C:\Users\andre\Desktop\GTR\GTR_Framework\visualstudio\libs\include\GL\glew.h(7605): message : vea la definición anterior de 'GL_STATIC_DRAW_ARB' (compilando archivo de origen ..\..\src\mesh.cpp)
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\scene.h(10,12): warning C4099: 'cJSON': nombre de tipo visto anteriormente usando 'struct' ahora se ve usando 'class' (compilando archivo de origen ..\..\src\shader.cpp)
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\extra\cJSON.h(104): message : vea la declaración de 'cJSON' (compilando archivo de origen ..\..\src\shader.cpp)
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\mesh.cpp(764,6): warning C4996: 'fopen': This function or variable may be unsafe. Consider using fopen_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\mesh.cpp(881,12): warning C4996: 'fopen': This function or variable may be unsafe. Consider using fopen_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\scene.h(10,12): warning C4099: 'cJSON': nombre de tipo visto anteriormente usando 'struct' ahora se ve usando 'class' (compilando archivo de origen ..\..\src\main.cpp)
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\extra\cJSON.h(104): message : vea la declaración de 'cJSON' (compilando archivo de origen ..\..\src\main.cpp)
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\scene.h(10,12): warning C4099: 'cJSON': nombre de tipo visto anteriormente usando 'struct' ahora se ve usando 'class' (compilando archivo de origen ..\..\src\extra\hdre.cpp)
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\extra\cJSON.h(104): message : vea la declaración de 'cJSON' (compilando archivo de origen ..\..\src\extra\hdre.cpp)
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\scene.h(10,12): warning C4099: 'cJSON': nombre de tipo visto anteriormente usando 'struct' ahora se ve usando 'class' (compilando archivo de origen ..\..\src\application.cpp)
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\extra\cJSON.h(104): message : vea la declaración de 'cJSON' (compilando archivo de origen ..\..\src\application.cpp)
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\mesh.cpp(1136,50): warning C4244: 'argumento': conversión de 'double' a 'float'; posible pérdida de datos
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\mesh.cpp(1158,5): warning C4996: 'strcpy': This function or variable may be unsafe. Consider using strcpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\mesh.cpp(1162,5): warning C4996: 'strcpy': This function or variable may be unsafe. Consider using strcpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\mesh.cpp(1172,5): warning C4996: 'strcpy': This function or variable may be unsafe. Consider using strcpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\mesh.cpp(1273,27): warning C4244: 'argumento': conversión de 'double' a 'const unsigned int'; posible pérdida de datos
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\mesh.cpp(1274,23): warning C4018: '<': no coinciden signed/unsigned
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\mesh.cpp(1222,12): warning C4996: 'fopen': This function or variable may be unsafe. Consider using fopen_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\mesh.cpp(1412,40): warning C4244: 'argumento': conversión de 'double' a 'float'; posible pérdida de datos
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\mesh.cpp(1412,25): warning C4244: 'argumento': conversión de 'double' a 'float'; posible pérdida de datos
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\mesh.cpp(1414,44): warning C4244: 'argumento': conversión de 'double' a 'float'; posible pérdida de datos
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\mesh.cpp(1414,31): warning C4244: 'argumento': conversión de 'double' a 'float'; posible pérdida de datos
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\mesh.cpp(1415,31): warning C4244: 'argumento': conversión de 'double' a 'float'; posible pérdida de datos
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\mesh.cpp(1422,44): warning C4244: 'argumento': conversión de 'double' a 'float'; posible pérdida de datos
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\mesh.cpp(1422,31): warning C4244: 'argumento': conversión de 'double' a 'float'; posible pérdida de datos
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\mesh.cpp(1424,43): warning C4244: 'argumento': conversión de 'double' a 'float'; posible pérdida de datos
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\mesh.cpp(1437,30): warning C4244: '=': conversión de 'double' a 'float'; posible pérdida de datos
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\mesh.cpp(1460,30): warning C4244: '=': conversión de 'double' a 'float'; posible pérdida de datos
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\mesh.cpp(1489,21): warning C4018: '<': no coinciden signed/unsigned
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\mesh.cpp(1498,21): warning C4018: '<': no coinciden signed/unsigned
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\scene.h(10,12): warning C4099: 'cJSON': nombre de tipo visto anteriormente usando 'struct' ahora se ve usando 'class' (compilando archivo de origen ..\..\src\camera.cpp)
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\extra\cJSON.h(104): message : vea la declaración de 'cJSON' (compilando archivo de origen ..\..\src\camera.cpp)
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\extra\cgltf.h(1965,2): warning C4996: 'strncpy': This function or variable may be unsafe. Consider using strncpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details. (compilando archivo de origen ..\..\src\gltf_loader.cpp)
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\extra\cgltf.h(1975,2): warning C4996: 'strncpy': This function or variable may be unsafe. Consider using strncpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details. (compilando archivo de origen ..\..\src\gltf_loader.cpp)
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\scene.h(10,12): warning C4099: 'cJSON': nombre de tipo visto anteriormente usando 'struct' ahora se ve usando 'class' (compilando archivo de origen ..\..\src\fbo.cpp)
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\extra\cJSON.h(104): message : vea la declaración de 'cJSON' (compilando archivo de origen ..\..\src\fbo.cpp)
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\extra\cgltf.h(2054,2): warning C4996: 'strncpy': This function or variable may be unsafe. Consider using strncpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details. (compilando archivo de origen ..\..\src\gltf_loader.cpp)
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\main.cpp(153,46): warning C4244: '=': conversión de 'Sint32' a 'float'; posible pérdida de datos
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\main.cpp(188,23): warning C4244: '=': conversión de 'double' a 'float'; posible pérdida de datos
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\extra\hdre.cpp(140,11): warning C4244: '=': conversión de 'double' a 'int'; posible pérdida de datos
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\extra\hdre.cpp(201,11): warning C4244: '=': conversión de 'double' a 'int'; posible pérdida de datos
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\scene.cpp(17,20): warning C4018: '<': no coinciden signed/unsigned
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\extra\hdre.cpp(108,12): warning C4996: 'fopen': This function or variable may be unsafe. Consider using fopen_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\scene.cpp(91,16): warning C4244: 'inicializando': conversión de 'double' a 'float'; posible pérdida de datos
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\scene.cpp(92,28): warning C4244: 'argumento': conversión de 'double' a 'float'; posible pérdida de datos
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\scene.cpp(124,31): warning C4244: 'argumento': conversión de 'int' a 'float'; posible pérdida de datos
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\scene.cpp(124,24): warning C4244: 'argumento': conversión de 'int' a 'float'; posible pérdida de datos
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\scene.cpp(131,29): warning C4244: 'argumento': conversión de 'double' a 'float'; posible pérdida de datos
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\scene.cpp(130,29): warning C4244: 'argumento': conversión de 'double' a 'float'; posible pérdida de datos
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\scene.cpp(129,46): warning C4244: 'argumento': conversión de 'double' a 'float'; posible pérdida de datos
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\scene.cpp(213,57): warning C4305: 'argumento': truncamiento de 'double' a 'float'
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\scene.cpp(223,16): warning C4244: 'inicializando': conversión de 'int' a 'float'; posible pérdida de datos
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\scene.cpp(224,17): warning C4244: 'inicializando': conversión de 'int' a 'float'; posible pérdida de datos
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\scene.cpp(226,79): warning C4305: 'argumento': truncamiento de 'double' a 'float'
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\scene.cpp(233,79): warning C4305: 'argumento': truncamiento de 'double' a 'float'
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\scene.cpp(280,69): warning C4305: 'argumento': truncamiento de 'double' a 'float'
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\extra\cJSON.h(105,1): warning C4099: 'cJSON': nombre de tipo visto anteriormente usando 'class' ahora se ve usando 'struct' (compilando archivo de origen ..\..\src\prefab.cpp)
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\extra\cJSON.h(104): message : vea la declaración de 'cJSON' (compilando archivo de origen ..\..\src\prefab.cpp)
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\fbo.cpp(112,24): warning C4244: '=': conversión de 'float' a 'int'; posible pérdida de datos
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\fbo.cpp(113,25): warning C4244: '=': conversión de 'float' a 'int'; posible pérdida de datos
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\fbo.cpp(143,24): warning C4018: '<': no coinciden signed/unsigned
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\extra\cJSON.h(105,1): warning C4099: 'cJSON': nombre de tipo visto anteriormente usando 'class' ahora se ve usando 'struct' (compilando archivo de origen ..\..\src\renderer.cpp)
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\extra\cJSON.h(104): message : vea la declaración de 'cJSON' (compilando archivo de origen ..\..\src\renderer.cpp)
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\prefab.cpp(41,20): warning C4018: '<': no coinciden signed/unsigned
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\prefab.cpp(55,20): warning C4018: '<': no coinciden signed/unsigned
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\prefab.cpp(63,20): warning C4018: '<': no coinciden signed/unsigned
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\camera.cpp(116,11): warning C4244: 'inicializando': conversión de 'double' a 'float'; posible pérdida de datos
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\camera.cpp(125,13): warning C4244: 'argumento': conversión de 'double' a 'float'; posible pérdida de datos
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\camera.cpp(346,70): warning C4305: 'argumento': truncamiento de 'double' a 'float'
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\camera.cpp(351,69): warning C4305: 'argumento': truncamiento de 'double' a 'float'
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\prefab.cpp(79,20): warning C4018: '<': no coinciden signed/unsigned
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\prefab.cpp(108,20): warning C4018: '<': no coinciden signed/unsigned
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\prefab.cpp(138,20): warning C4018: '<': no coinciden signed/unsigned
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\prefab.cpp(170,22): warning C4018: '<': no coinciden signed/unsigned
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\renderer.cpp(225,34): warning C4244: 'argumento': conversión de 'double' a 'GLsizei'; posible pérdida de datos
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\renderer.cpp(225,27): warning C4244: 'argumento': conversión de 'double' a 'GLsizei'; posible pérdida de datos
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\renderer.cpp(225,19): warning C4244: 'argumento': conversión de 'double' a 'GLint'; posible pérdida de datos
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\renderer.cpp(227,40): warning C4244: 'argumento': conversión de 'double' a 'GLsizei'; posible pérdida de datos
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\renderer.cpp(227,33): warning C4244: 'argumento': conversión de 'double' a 'GLsizei'; posible pérdida de datos
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\renderer.cpp(227,25): warning C4244: 'argumento': conversión de 'double' a 'GLint'; posible pérdida de datos
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\renderer.cpp(227,16): warning C4244: 'argumento': conversión de 'double' a 'GLint'; posible pérdida de datos
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\renderer.cpp(229,28): warning C4244: 'argumento': conversión de 'double' a 'GLsizei'; posible pérdida de datos
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\renderer.cpp(229,21): warning C4244: 'argumento': conversión de 'double' a 'GLsizei'; posible pérdida de datos
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\renderer.cpp(231,34): warning C4244: 'argumento': conversión de 'double' a 'GLsizei'; posible pérdida de datos
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\renderer.cpp(231,27): warning C4244: 'argumento': conversión de 'double' a 'GLsizei'; posible pérdida de datos
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\renderer.cpp(231,16): warning C4244: 'argumento': conversión de 'double' a 'GLint'; posible pérdida de datos
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\renderer.cpp(269,20): warning C4018: '<': no coinciden signed/unsigned
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\renderer.cpp(333,20): warning C4018: '<': no coinciden signed/unsigned
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\renderer.cpp(432,10): warning C4244: 'inicializando': conversión de 'long' a 'float'; posible pérdida de datos
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\renderer.cpp(468,28): warning C4244: '=': conversión de 'double' a 'float'; posible pérdida de datos
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\renderer.cpp(610,73): warning C4244: 'argumento': conversión de 'double' a 'float'; posible pérdida de datos
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\renderer.cpp(610,39): warning C4244: 'argumento': conversión de 'double' a 'float'; posible pérdida de datos
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\renderer.cpp(633,15): warning C4244: 'inicializando': conversión de 'double' a 'float'; posible pérdida de datos
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\renderer.cpp(634,13): warning C4244: 'inicializando': conversión de 'double' a 'float'; posible pérdida de datos
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\renderer.cpp(635,11): warning C4244: 'inicializando': conversión de 'double' a 'float'; posible pérdida de datos
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\renderer.cpp(659,61): warning C4305: 'argumento': truncamiento de 'double' a 'float'
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\renderer.cpp(669,49): error C2660: 'Mesh::Get': la función no acepta 1 argumentos
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\mesh.h(112,15): message : vea la declaración de 'Mesh::Get' (compilando archivo de origen ..\..\src\renderer.cpp)
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\prefab.cpp(243,20): warning C4018: '<': no coinciden signed/unsigned
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\application.cpp(117,14): warning C4244: 'inicializando': conversión de 'double' a 'float'; posible pérdida de datos
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\application.cpp(118,20): warning C4244: 'inicializando': conversión de 'double' a 'float'; posible pérdida de datos
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\application.cpp(134,55): warning C4244: 'argumento': conversión de 'double' a 'float'; posible pérdida de datos
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\application.cpp(136,55): warning C4244: 'argumento': conversión de 'double' a 'float'; posible pérdida de datos
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\application.cpp(261,20): warning C4018: '<': no coinciden signed/unsigned
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\application.cpp(367,36): warning C4244: '*=': conversión de 'double' a 'float'; posible pérdida de datos
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\application.cpp(369,35): warning C4244: 'argumento': conversión de 'double' a 'float'; posible pérdida de datos
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\shader.cpp(178,20): warning C4018: '<': no coinciden signed/unsigned
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\shader.cpp(217,20): warning C4018: '<': no coinciden signed/unsigned
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\extra\cJSON.h(105,1): warning C4099: 'cJSON': nombre de tipo visto anteriormente usando 'class' ahora se ve usando 'struct' (compilando archivo de origen ..\..\src\gltf_loader.cpp)
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\extra\cJSON.h(104): message : vea la declaración de 'cJSON' (compilando archivo de origen ..\..\src\gltf_loader.cpp)
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\gltf_loader.cpp(61,20): warning C4018: '<': no coinciden signed/unsigned
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\gltf_loader.cpp(71,13): warning C4018: '<': no coinciden signed/unsigned
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\gltf_loader.cpp(114,20): warning C4018: '<': no coinciden signed/unsigned
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\gltf_loader.cpp(141,20): warning C4018: '<': no coinciden signed/unsigned
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\gltf_loader.cpp(163,20): warning C4018: '<': no coinciden signed/unsigned
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\gltf_loader.cpp(183,21): warning C4018: '<': no coinciden signed/unsigned
+  texture.cpp
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\gltf_loader.cpp(397,22): warning C4018: '<': no coinciden signed/unsigned
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\gltf_loader.cpp(426,20): warning C4018: '<': no coinciden signed/unsigned
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\gltf_loader.cpp(471,2): warning C4996: 'strcpy': This function or variable may be unsafe. Consider using strcpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\gltf_loader.cpp(491,22): warning C4018: '<': no coinciden signed/unsigned
+  utils.cpp
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\scene.h(10,12): warning C4099: 'cJSON': nombre de tipo visto anteriormente usando 'struct' ahora se ve usando 'class' (compilando archivo de origen ..\..\src\utils.cpp)
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\extra\cJSON.h(104): message : vea la declaración de 'cJSON' (compilando archivo de origen ..\..\src\utils.cpp)
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\scene.h(10,12): warning C4099: 'cJSON': nombre de tipo visto anteriormente usando 'struct' ahora se ve usando 'class' (compilando archivo de origen ..\..\src\texture.cpp)
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\extra\cJSON.h(104): message : vea la declaración de 'cJSON' (compilando archivo de origen ..\..\src\texture.cpp)
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\utils.cpp(103,13): warning C4996: 'fopen': This function or variable may be unsafe. Consider using fopen_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\utils.cpp(128,7): warning C4996: 'fopen': This function or variable may be unsafe. Consider using fopen_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\utils.cpp(184,20): warning C4018: '<': no coinciden signed/unsigned
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\utils.cpp(185,26): warning C4018: '<': no coinciden signed/unsigned
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\utils.cpp(333,51): warning C4244: 'argumento': conversión de 'double' a 'float'; posible pérdida de datos
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\utils.cpp(334,63): warning C4305: 'argumento': truncamiento de 'double' a 'float'
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\utils.cpp(374,10): warning C4244: '=': conversión de 'double' a 'float'; posible pérdida de datos
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\utils.cpp(384,16): warning C4244: '=': conversión de 'double' a 'float'; posible pérdida de datos
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\utils.cpp(406,11): warning C4244: 'inicializando': conversión de 'double' a 'float'; posible pérdida de datos
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\utils.cpp(408,17): warning C4244: 'argumento': conversión de 'float' a 'const unsigned int'; posible pérdida de datos
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\utils.cpp(421,12): warning C4244: 'inicializando': conversión de 'double' a 'float'; posible pérdida de datos
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\utils.cpp(430,14): warning C4018: '>=': no coinciden signed/unsigned
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\utils.cpp(470,20): warning C4018: '<': no coinciden signed/unsigned
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\utils.cpp(471,59): warning C4244: 'argumento': conversión de '_Ty' a 'unsigned int'; posible pérdida de datos
+          with
+          [
+              _Ty=float
+          ]
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\utils.cpp(471,44): warning C4244: 'argumento': conversión de '_Ty' a 'unsigned int'; posible pérdida de datos
+          with
+          [
+              _Ty=float
+          ]
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\utils.cpp(471,29): warning C4244: 'argumento': conversión de '_Ty' a 'unsigned int'; posible pérdida de datos
+          with
+          [
+              _Ty=float
+          ]
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\utils.cpp(481,20): warning C4018: '<': no coinciden signed/unsigned
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\utils.cpp(492,20): warning C4018: '<': no coinciden signed/unsigned
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\utils.cpp(493,74): warning C4244: 'argumento': conversión de '_Ty' a 'unsigned char'; posible pérdida de datos
+          with
+          [
+              _Ty=float
+          ]
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\utils.cpp(493,59): warning C4244: 'argumento': conversión de '_Ty' a 'unsigned char'; posible pérdida de datos
+          with
+          [
+              _Ty=float
+          ]
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\utils.cpp(493,44): warning C4244: 'argumento': conversión de '_Ty' a 'unsigned char'; posible pérdida de datos
+          with
+          [
+              _Ty=float
+          ]
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\utils.cpp(493,29): warning C4244: 'argumento': conversión de '_Ty' a 'unsigned char'; posible pérdida de datos
+          with
+          [
+              _Ty=float
+          ]
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\utils.cpp(512,17): warning C4244: 'return': conversión de 'double' a 'float'; posible pérdida de datos
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\utils.cpp(540,20): warning C4018: '<': no coinciden signed/unsigned
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\utils.cpp(544,23): warning C4244: '=': conversión de 'double' a '_Ty'; posible pérdida de datos
+          with
+          [
+              _Ty=float
+          ]
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\texture.cpp(33,51): warning C4244: 'argumento': conversión de 'unsigned int' a 'float'; posible pérdida de datos
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\texture.cpp(33,9): warning C4244: 'inicializando': conversión de 'double' a 'int'; posible pérdida de datos
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\texture.cpp(34,56): warning C4244: 'argumento': conversión de 'unsigned int' a 'float'; posible pérdida de datos
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\texture.cpp(34,9): warning C4244: 'inicializando': conversión de 'double' a 'int'; posible pérdida de datos
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\texture.cpp(39,15): warning C4018: '<': no coinciden signed/unsigned
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\texture.cpp(40,15): warning C4018: '<': no coinciden signed/unsigned
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\texture.cpp(47,55): warning C4244: 'argumento': conversión de 'unsigned int' a 'float'; posible pérdida de datos
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\texture.cpp(47,9): warning C4244: 'inicializando': conversión de 'double' a 'int'; posible pérdida de datos
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\texture.cpp(48,57): warning C4244: 'argumento': conversión de 'unsigned int' a 'float'; posible pérdida de datos
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\texture.cpp(48,9): warning C4244: 'inicializando': conversión de 'double' a 'int'; posible pérdida de datos
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\texture.cpp(53,15): warning C4018: '<': no coinciden signed/unsigned
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\texture.cpp(54,15): warning C4018: '<': no coinciden signed/unsigned
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\texture.cpp(331,94): warning C4244: 'argumento': conversión de 'float' a 'GLsizei'; posible pérdida de datos
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\texture.cpp(331,87): warning C4244: 'argumento': conversión de 'float' a 'GLsizei'; posible pérdida de datos
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\texture.cpp(631,18): warning C4244: '=': conversión de 'float' a 'unsigned int'; posible pérdida de datos
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\texture.cpp(632,19): warning C4244: '=': conversión de 'float' a 'unsigned int'; posible pérdida de datos
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\texture.cpp(655,19): warning C4996: 'fopen': This function or variable may be unsafe. Consider using fopen_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\texture.cpp(651,12): warning C4101: 'bytesPerPixel': variable local sin referencia
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\texture.cpp(787,6): warning C4101: 'actual_comps': variable local sin referencia
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\texture.cpp(853,15): warning C4996: 'fopen': This function or variable may be unsafe. Consider using fopen_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\texture.cpp(925,15): warning C4996: 'fopen': This function or variable may be unsafe. Consider using fopen_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\texture.cpp(939,15): warning C4996: 'fopen': This function or variable may be unsafe. Consider using fopen_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\texture.cpp(958,18): warning C4244: '=': conversión de 'float' a 'unsigned int'; posible pérdida de datos
+C:\Users\andre\Desktop\GTR\GTR_Framework\src\texture.cpp(959,19): warning C4244: '=': conversión de 'float' a 'unsigned int'; posible pérdida de datos

@@ -16,6 +16,7 @@ tonemapper quad.vs tonemapper.fs
 deferred_sphere basic.vs deferred.fs
 ssao quad.vs ssao.fs
 blur quad.vs blur.fs
+probe basic.vs probe.fs
 
 \basic.vs
 
@@ -1082,3 +1083,28 @@ void main() {
 
     FragColor = vec4(vec3(result), 1.0);	
 }  
+
+
+\probe.fs
+
+#version 330 core
+
+in vec3 v_position;
+in vec3 v_world_position;
+in vec3 v_normal;
+
+uniform u_coeffs;
+
+out vec4 FragColor;
+
+void main()
+{
+	vec2 uv = v_uv;
+
+	color *= vec4(1.0, 0.0, 0.0, 1.0);
+
+	if(color.a < u_alpha_cutoff)
+		discard;
+
+	FragColor = color;
+}

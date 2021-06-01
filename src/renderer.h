@@ -47,6 +47,21 @@ namespace GTR {
 	};
 
 
+	//the struct that holds one probe coeffs
+	struct SphericalHarmonics {
+		Vector3 coeffs[9];
+	};
+
+	//struct to store probes
+	struct sProbe {
+		Vector3 pos; //where is located
+		Vector3 local; //its ijk pos in the matrix
+		int index; //its index in the linear array
+		SphericalHarmonics sh; //coeffs
+	};
+
+
+
 	std::vector<Vector3> generateSpherePoints(int num, float radius, bool hemi);
 	// This class is in charge of rendering anything in our system.
 	// Separating the render from anything else makes the code cleaner
@@ -120,6 +135,8 @@ namespace GTR {
 		void renderToFbo(GTR::Scene* scene, GTR::LightEntity* light);
 		//void renderToFbo(GTR::Scene* scene, Camera* camera);
 		void renderInMenu();
+
+		void renderProbe(Vector3 pos, float size, float* coeffs);
 
 	};
 

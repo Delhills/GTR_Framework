@@ -113,7 +113,7 @@ bool GTR::Scene::load(const char* filename)
 	//free memory
 	cJSON_Delete(json);
 
-	for (int i = 1; i < 20; i++)
+	for (int i = 1; i <= 20; i++)
 	{
 		BaseEntity* ent = createEntity("LIGHT");
 		addEntity(ent);
