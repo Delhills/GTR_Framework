@@ -601,16 +601,7 @@ uniform sampler2D u_extra_texture;
 uniform sampler2D u_depth_texture;
 uniform sampler2D u_ao_texture;
 
-
-uniform vec3 u_ambient_light; 
-
-uniform int u_light_type;
-uniform vec3 u_light_pos;
-uniform vec3 u_light_color;
-uniform vec3 u_light_target;
-uniform float u_light_max_dists;
-uniform float u_light_coscutoff;
-uniform float u_light_spotexp;
+#include "includeLights"
 
 uniform vec3 u_camera_position;
 uniform mat4 u_inverse_viewprojection;

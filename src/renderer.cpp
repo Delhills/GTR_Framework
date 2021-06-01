@@ -118,8 +118,8 @@ void Renderer::renderDeferred(GTR::Scene* scene, std::vector <renderCall>& rende
 	ssao.apply(gbuffers_fbo.depth_texture, gbuffers_fbo.color_textures[1], camera, ao_buffer);
 	ssao.blurTexture(ao_buffer, ao_blur_buffer);
 
-	fbo.bind();
-	//gbuffers_fbo.depth_texture->copyTo(fbo.depth_texture);
+	fbo.bind(); //textura final pre hdr
+
 	glClearColor(0, 0, 0, 0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	checkGLErrors();
@@ -133,16 +133,15 @@ void Renderer::renderDeferred(GTR::Scene* scene, std::vector <renderCall>& rende
 
 	Mesh* sphere = Mesh::Get("data/meshes/sphere.obj", true);
 	Mesh* quad = Mesh::getQuad();
-	//Shader* shaderSphere = Shader::Get("deferred_sphere");
 
 
 
 	bool first_iter;
-	//LightEntity* light = scene->lights[0];
+
 	for (size_t i = 0; i < scene->lights.size(); i++)
 	{
 		LightEntity* light = scene->lights[i];
-		first_iter = i == 0 ? true : false;
+		first_iter = (i == 0);
 
 		if (light->light_type == DIRECTIONAL)
 		{
@@ -152,16 +151,14 @@ void Renderer::renderDeferred(GTR::Scene* scene, std::vector <renderCall>& rende
 
 		}
 		else {
-			shader = Shader::Get("deferred");
+			shader = Shader::Get("deferred");//deferred_sphere pero no nos ha funcionado
 			shader->enable();
-			mesh = quad;
+			mesh = quad; //sphere pero no nos ha funcionado
 			Matrix44 m;
 			Vector3 centre = light->model.getTranslation();
 			m.setTranslation(centre.x, centre.y, centre.z);
 			m.scale(light->max_distance, light->max_distance, light->max_distance);
-			shader->setUniform("u_model", m);
-
-			//render only the backfacing triangles of the sphere
+			//shader->setUniform("u_model", m);
 
 		}
 		
@@ -181,8 +178,13 @@ void Renderer::renderDeferred(GTR::Scene* scene, std::vector <renderCall>& rende
 
 		shader->setUniform("u_first_iter", first_iter);
 		//light set uniform
-
-		light->setLightUniforms(shader, true);
+		if (light->light_type == POINT) {
+			light->setLightUniforms(shader, false);
+		}
+		else
+		{
+			light->setLightUniforms(shader, true);
+		}
 
 		shader->setTexture("u_ao_texture", ao_buffer, 5);
 
@@ -197,8 +199,8 @@ void Renderer::renderDeferred(GTR::Scene* scene, std::vector <renderCall>& rende
 	glDisable(GL_DEPTH_TEST);
 
 	fbo.unbind();
-	//Shader* final_shader = Shader::Get("finalShader");
-	Shader* final_shader = Shader::Get("tonemapper");
+	//Shader* final_shader = Shader::Get("finalShader"); //este solo aplica gamma
+	Shader* final_shader = Shader::Get("tonemapper"); //este aplica tonemapper
 	final_shader->enable();
 	final_shader->setUniform("u_average_lum", average_lum);
 	final_shader->setUniform("u_lumwhite2", lum_white * lum_white);
@@ -241,9 +243,6 @@ void Renderer::renderDeferred(GTR::Scene* scene, std::vector <renderCall>& rende
 
 void Renderer::renderToFbo(GTR::Scene* scene, LightEntity* light) {
 
-	/*fbo.bind();
-	renderScene(scene, camera);
-	fbo.unbind();*/
 
 	Shader* shader = Shader::Get("depth");
 
@@ -642,6 +641,22 @@ std::vector<Vector3> GTR::generateSpherePoints(int num,
 	}
 	return points;
 }
+
+
+void GTR::Renderer::renderInMenu() {
+
+	if (pipeline_mode == GTR::ePipelineMode::DEFERRED) {
+		ImGui::Checkbox("Show gbuffers", &show_gbuffers);
+		ImGui::Checkbox("Show SSAO", &show_ao_buffer);
+		ImGui::Checkbox("Apply tonemap", &hdr);
+		if (hdr) {
+			ImGui::SliderFloat("Average luminance", &average_lum, 0.0, 2.0);
+			ImGui::SliderFloat("White luminance", &lum_white, 0.0, 2.0);
+			ImGui::SliderFloat("Scale tonemap", &scale_tm, 0.001, 2.0);
+		}
+	}
+}
+
 
 Texture* GTR::CubemapFromHDRE(const char* filename)
 {

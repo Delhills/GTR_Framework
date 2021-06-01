@@ -250,6 +250,10 @@ void Application::renderDebugGUI(void)
 		camera->renderInMenu();
 		ImGui::TreePop();
 	}
+	if (ImGui::TreeNode(renderer, "Renderer")) {
+		renderer->renderInMenu();
+		ImGui::TreePop();
+	}
 
 	ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.75f, 0.75f, 0.75f, 1.0f));
 

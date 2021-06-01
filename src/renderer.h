@@ -119,6 +119,7 @@ namespace GTR {
 
 		void renderToFbo(GTR::Scene* scene, GTR::LightEntity* light);
 		//void renderToFbo(GTR::Scene* scene, Camera* camera);
+		void renderInMenu();
 
 	};
 
