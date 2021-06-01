@@ -199,8 +199,12 @@ void Renderer::renderDeferred(GTR::Scene* scene, std::vector <renderCall>& rende
 	glDisable(GL_DEPTH_TEST);
 
 	sProbe probe;
+
+	memset(&probe, 0, sizeof(probe));
+
 	probe.sh.coeffs[0].set(1, 0, 0);
-	renderProbe(Vector3(0, 1, 0), 2, probe.sh.coeffs[0].v);
+	probe.sh.coeffs[1].set(1, 1, 0);
+	renderProbe(Vector3(0, 2, 0), 2, probe.sh.coeffs[0].v);
 
 	fbo.unbind();
 	//Shader* final_shader = Shader::Get("finalShader"); //este solo aplica gamma
