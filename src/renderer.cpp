@@ -11,8 +11,11 @@
 #include "extra/hdre.h"
 #include "application.h"
 #include <algorithm>
+#include "sphericalharmonics.h"
 
 using namespace GTR;
+
+sProbe probe;
 
 Renderer::Renderer() {
 	int w = Application::instance->window_width;
@@ -30,6 +33,12 @@ Renderer::Renderer() {
 				GL_RGBA,
 				GL_FLOAT,
 				false);
+	FBO* irr_fbo = NULL;
+
+	memset(&probe, 0, sizeof(probe));
+
+	probe.sh.coeffs[0].set(1, 0, 0);
+	probe.sh.coeffs[1].set(1, 1, 0);
 }
 
 void Renderer::addRenderCalltoList(const Matrix44 model, Mesh* mesh, GTR::Material* material, Camera* camera, float dist) {
@@ -108,7 +117,6 @@ void Renderer::renderDeferred(GTR::Scene* scene, std::vector <renderCall>& rende
 	
 	gbuffers_fbo.unbind();
 
-
 	if (!ao_buffer)
 		ao_buffer = new Texture(w, h, GL_LUMINANCE, GL_UNSIGNED_BYTE);
 
@@ -118,7 +126,33 @@ void Renderer::renderDeferred(GTR::Scene* scene, std::vector <renderCall>& rende
 	ssao.apply(gbuffers_fbo.depth_texture, gbuffers_fbo.color_textures[1], camera, ao_buffer);
 	ssao.blurTexture(ao_buffer, ao_blur_buffer);
 
-	fbo.bind(); //textura final pre hdr
+	viewFBO(&fbo, &gbuffers_fbo, camera, scene, hdr, ao_buffer);
+
+	Shader* final_shader = Shader::Get("tonemapper"); //este aplica tonemapper
+
+	final_shader->enable();
+	final_shader->setUniform("u_average_lum", average_lum);
+	final_shader->setUniform("u_lumwhite2", lum_white * lum_white);
+	final_shader->setUniform("u_scale", scale_tm);
+	
+	if (hdr) 
+		fbo.color_textures[0]->toViewport(final_shader);
+	else
+		fbo.color_textures[0]->toViewport();
+
+	glDisable(GL_BLEND);
+
+	final_shader->disable();
+
+	if (show_gbuffers)
+		view_gbuffers(&gbuffers_fbo, w, h, camera);
+	else if (show_ao_buffer)
+		ao_blur_buffer->toViewport();
+}
+
+void Renderer::viewFBO(FBO* fbo, FBO* gbuffers_fbo, Camera* camera, GTR::Scene* scene, bool hdr, Texture* ao_buffer) {
+
+	fbo->bind(); //textura final pre hdr
 
 	glClearColor(0, 0, 0, 0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -126,7 +160,6 @@ void Renderer::renderDeferred(GTR::Scene* scene, std::vector <renderCall>& rende
 
 	glDisable(GL_BLEND);
 	glDisable(GL_DEPTH_TEST);
-
 
 	Mesh* mesh;
 	Shader* shader;
@@ -136,118 +169,80 @@ void Renderer::renderDeferred(GTR::Scene* scene, std::vector <renderCall>& rende
 
 
 
-	bool first_iter;
+	for (size_t i = 0; i < scene->lights.size(); i++) {
 
-	for (size_t i = 0; i < scene->lights.size(); i++)
-	{
 		LightEntity* light = scene->lights[i];
-		first_iter = (i == 0);
 
-		if (light->light_type == DIRECTIONAL)
-		{
-			shader = Shader::Get("deferred");
-			shader->enable();
-			mesh = quad;
+		shader = Shader::Get("deferred");
+		shader->enable();
+		mesh = quad;
+		bool first_iter = (i == 0);
 
-		}
-		else {
-			shader = Shader::Get("deferred");//deferred_sphere pero no nos ha funcionado
-			shader->enable();
-			mesh = quad; //sphere pero no nos ha funcionado
-			Matrix44 m;
-			Vector3 centre = light->model.getTranslation();
-			m.setTranslation(centre.x, centre.y, centre.z);
-			m.scale(light->max_distance, light->max_distance, light->max_distance);
-			//shader->setUniform("u_model", m);
-
-		}
-		
-		shader->setUniform("u_viewprojection", camera->viewprojection_matrix);
-		Matrix44 inv_vp = camera->viewprojection_matrix;
-		inv_vp.inverse();
-		shader->setUniform("hdr", hdr);
-
-		shader->setUniform("u_camera_position", camera->eye);
-		shader->setUniform("u_inverse_viewprojection", inv_vp);
-
-		shader->setTexture("u_color_texture", gbuffers_fbo.color_textures[0], 0);
-		shader->setTexture("u_normal_texture", gbuffers_fbo.color_textures[1], 1);
-		shader->setTexture("u_extra_texture", gbuffers_fbo.color_textures[2], 2);
-		shader->setTexture("u_depth_texture", gbuffers_fbo.depth_texture, 3);
-		shader->setUniform("u_ambient_light", scene->ambient_light);
-
-		shader->setUniform("u_first_iter", first_iter);
-		//light set uniform
-		if (light->light_type == POINT) {
-			light->setLightUniforms(shader, false);
-		}
-		else
-		{
-			light->setLightUniforms(shader, true);
-		}
-
-		shader->setTexture("u_ao_texture", ao_buffer, 5);
+		setUniformsLight(light, camera, scene, ao_buffer, shader, hdr, gbuffers_fbo, first_iter);
 
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_ONE, GL_ONE);
+
 		mesh->render(GL_TRIANGLES);
+
 		shader->disable();
 	}
-
 
 	glDisable(GL_BLEND);
 	glDisable(GL_DEPTH_TEST);
 
-	sProbe probe;
-
-	memset(&probe, 0, sizeof(probe));
-
-	probe.sh.coeffs[0].set(1, 0, 0);
-	probe.sh.coeffs[1].set(1, 1, 0);
 	renderProbe(Vector3(0, 2, 0), 2, probe.sh.coeffs[0].v);
 
-	fbo.unbind();
-	//Shader* final_shader = Shader::Get("finalShader"); //este solo aplica gamma
-	Shader* final_shader = Shader::Get("tonemapper"); //este aplica tonemapper
-	final_shader->enable();
-	final_shader->setUniform("u_average_lum", average_lum);
-	final_shader->setUniform("u_lumwhite2", lum_white * lum_white);
-	final_shader->setUniform("u_scale", scale_tm);
-	
-	if (hdr) {
-		fbo.color_textures[0]->toViewport(final_shader);
-		final_shader->disable();
-	}
-	else
-	{
-		fbo.color_textures[0]->toViewport();
-	}
-	glDisable(GL_BLEND);
-
-	if (show_gbuffers) {
-
-		glViewport(0, h * 0.5, w*0.5, h*0.5);
-		gbuffers_fbo.color_textures[0]->toViewport();
-		glViewport(w * 0.5, h * 0.5, w*0.5, h*0.5);
-		gbuffers_fbo.color_textures[1]->toViewport();
-		glViewport(0, 0, w*0.5, h*0.5);
-		gbuffers_fbo.color_textures[2]->toViewport();
-		glViewport(w * 0.5, 0, w*0.5, h*0.5);
-
-		Shader* depthShader = Shader::Get("depth");
-
-		depthShader->enable();
-		depthShader->setUniform("u_camera_nearfar", Vector2 (camera->near_plane, camera->far_plane));
-
-		gbuffers_fbo.depth_texture->toViewport(depthShader);
-		depthShader->disable();
-
-		glViewport(0, 0, w, h);
-	}
-	if (show_ao_buffer)
-		ao_blur_buffer->toViewport();
+	fbo->unbind();
 }
 
+void Renderer::view_gbuffers(FBO* gbuffers_fbo, float w, float h, Camera* camera) {
+
+	glViewport(0, h * 0.5, w * 0.5, h * 0.5);
+	gbuffers_fbo->color_textures[0]->toViewport();
+	glViewport(w * 0.5, h * 0.5, w * 0.5, h * 0.5);
+	gbuffers_fbo->color_textures[1]->toViewport();
+	glViewport(0, 0, w * 0.5, h * 0.5);
+	gbuffers_fbo->color_textures[2]->toViewport();
+	glViewport(w * 0.5, 0, w * 0.5, h * 0.5);
+
+	Shader* depthShader = Shader::Get("depth");
+
+	depthShader->enable();
+	depthShader->setUniform("u_camera_nearfar", Vector2(camera->near_plane, camera->far_plane));
+
+	gbuffers_fbo->depth_texture->toViewport(depthShader);
+	depthShader->disable();
+
+	glViewport(0, 0, w, h);
+}
+
+void Renderer::setUniformsLight(LightEntity* light, Camera* camera, GTR::Scene* scene, Texture* ao_buffer, Shader* shader, bool hdr, FBO* gbuffers_fbo, bool first_iter) {
+
+	shader->setUniform("u_viewprojection", camera->viewprojection_matrix);
+	Matrix44 inv_vp = camera->viewprojection_matrix;
+	inv_vp.inverse();
+	shader->setUniform("hdr", hdr);
+
+	shader->setUniform("u_camera_position", camera->eye);
+	shader->setUniform("u_inverse_viewprojection", inv_vp);
+
+	shader->setTexture("u_color_texture", gbuffers_fbo->color_textures[0], 0);
+
+	shader->setTexture("u_normal_texture", gbuffers_fbo->color_textures[1], 1);
+	shader->setTexture("u_extra_texture", gbuffers_fbo->color_textures[2], 2);
+	shader->setTexture("u_depth_texture", gbuffers_fbo->depth_texture, 3);
+	shader->setUniform("u_ambient_light", scene->ambient_light);
+
+	shader->setUniform("u_first_iter", first_iter);
+
+	if (light->light_type == eLightType(0))
+		light->setLightUniforms(shader, false);
+	else
+		light->setLightUniforms(shader, true);
+
+	shader->setTexture("u_ao_texture", ao_buffer, 5);
+}
 
 void Renderer::renderToFbo(GTR::Scene* scene, LightEntity* light) {
 
@@ -691,6 +686,47 @@ void Renderer::renderProbe(Vector3 pos, float size, float* coeffs)
 }
 
 
+void Renderer::extractProbe(GTR::Scene* scene, sProbe p)
+{
+	FloatImage images[6]; //here we will store the six views
+	Camera cam;
+
+	//set the fov to 90 and the aspect to 1
+	cam.setPerspective(90, 1, 0.1, 1000);
+
+	if (!irr_fbo) {
+		irr_fbo = new FBO();
+		irr_fbo->create(64, 64, GL_RGB, GL_FLOAT);
+	}
+
+	collectRenderCalls(scene, NULL);
+
+	for (int i = 0; i < 6; ++i) //for every cubemap face
+	{
+		//compute camera orientation using defined vectors
+		Vector3 eye = p.pos;
+		Vector3 front = cubemapFaceNormals[i][2];
+		Vector3 center = p.pos + front;
+		Vector3 up = cubemapFaceNormals[i][1];
+		cam.lookAt(eye, center, up);
+		cam.enable();
+
+		//render the scene from this point of view
+		irr_fbo->bind();
+		renderForward(scene, renderCallList, &cam);
+		irr_fbo->unbind();
+
+		//read the pixels back and store in a FloatImage
+		images[i].fromTexture(irr_fbo->color_textures[0]);
+	}
+
+	//compute the coefficients given the six images
+	p.sh = computeSH(images, 1.0);
+}
+
+void Renderer::UpdateIrradianceCache(GTR::Scene* scene) {
+	extractProbe(scene, probe);
+}
 
 Texture* GTR::CubemapFromHDRE(const char* filename)
 {

@@ -2,6 +2,8 @@
 #include "prefab.h"
 #include "fbo.h"
 
+#include "sphericalharmonics.h"
+
 //forward declarations
 class Camera;
 
@@ -46,12 +48,6 @@ namespace GTR {
 		void apply(Texture* depth_buffer, Texture* normal_buffer, Camera* cam, Texture* output);
 	};
 
-
-	//the struct that holds one probe coeffs
-	struct SphericalHarmonics {
-		Vector3 coeffs[9];
-	};
-
 	//struct to store probes
 	struct sProbe {
 		Vector3 pos; //where is located
@@ -59,7 +55,6 @@ namespace GTR {
 		int index; //its index in the linear array
 		SphericalHarmonics sh; //coeffs
 	};
-
 
 
 	std::vector<Vector3> generateSpherePoints(int num, float radius, bool hemi);
@@ -75,18 +70,24 @@ namespace GTR {
 		FBO fbo;
 		FBO gbuffers_fbo;
 		FBO final_fbo;
+		FBO* irr_fbo;
 
 		bool rendering_shadowmap;
+
 		eRenderMode render_mode;
 		ePipelineMode pipeline_mode;
 		eLightType light_types[5];
+
 		Vector3 light_position[5];
 		Vector3 light_target[5];
 		Vector3 light_color[5];
+
 		float light_maxdists[5];
 		float light_coscutoff[5];
 		float light_spotexponent[5];
+
 		Vector3 light_vector[5];
+
 		bool hdr = true;
 		bool show_fbo = false;
 		bool show_gbuffers = false;
@@ -99,6 +100,7 @@ namespace GTR {
 
 		Texture* ao_buffer = NULL;
 		Texture* ao_blur_buffer = NULL;
+
 		SSAOFX ssao;
 
 		Renderer();
@@ -137,6 +139,12 @@ namespace GTR {
 		void renderInMenu();
 
 		void renderProbe(Vector3 pos, float size, float* coeffs);
+		void extractProbe(GTR::Scene* scene, sProbe p);
+		void UpdateIrradianceCache(GTR::Scene* scene);
+
+		void view_gbuffers(FBO* gbuffers_fbo, float w, float h, Camera* camera);
+		void viewFBO(FBO* fbo, FBO* gbuffers_fbo, Camera* camera, GTR::Scene* scene, bool hdr, Texture* ao_buffer);
+		void setUniformsLight(LightEntity* light, Camera* camera, GTR::Scene* scene, Texture* ao_buffer, Shader* shader, bool hdr, FBO* gbuffers_fbo, bool first_iter);
 
 	};
 
