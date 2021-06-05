@@ -266,7 +266,8 @@ void GTR::LightEntity::setLightUniforms(Shader* shader, bool useshadowmap)
 	shader->setUniform("u_light_type", light_type);
 	shader->setUniform("u_light_pos", model.getTranslation());
 	shader->setUniform("u_light_target", model.frontVector());
-	shader->setUniform("u_light_color", color * intensity);
+	shader->setUniform("u_light_color", color);
+	shader->setUniform("u_light_intensity", intensity);
 	shader->setUniform("u_light_max_dists", max_distance);
 	shader->setUniform("u_light_coscutoff", (float)cos((cone_angle / 180.0) * PI));
 	shader->setUniform("u_light_spotexp", spot_exponent);

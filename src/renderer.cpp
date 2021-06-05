@@ -461,7 +461,8 @@ void Renderer::renderMeshWithMaterial(eRenderMode mode, GTR::Scene* scene, const
 	if (mode == SINGLE) {
 		for (size_t i = 0; i < lightsScene.size() && i < 5; i++) {
 			light_types[i] = lightsScene[i]->light_type;
-			light_color[i] = lightsScene[i]->color * lightsScene[i]->intensity;
+			light_color[i] = lightsScene[i]->color;
+			light_intensity[i] = lightsScene[i]->intensity;
 			light_position[i] = lightsScene[i]->model.getTranslation();
 			light_maxdists[i] = lightsScene[i]->max_distance;
 			light_coscutoff[i] = cos((lightsScene[i]->cone_angle / 180.0) * PI);
@@ -470,15 +471,16 @@ void Renderer::renderMeshWithMaterial(eRenderMode mode, GTR::Scene* scene, const
 			light_vector[i] = lightsScene[i]->target;
 		}
 
-		
-		shader->setUniform1Array("u_light_type", (int*)&light_types, 4);
-		shader->setUniform3Array("u_light_pos", (float*)&light_position, 4);
-		shader->setUniform3Array("u_light_target", (float*)&light_target, 4);
-		shader->setUniform3Array("u_light_color", (float*)&light_color, 4);
-		shader->setUniform1Array("u_light_max_dists", (float*)&light_maxdists, 4);
-		shader->setUniform1Array("u_light_coscutoff", (float*)&light_coscutoff, 4);
-		shader->setUniform1Array("u_light_spotexp", (float*)&light_spotexponent, 4);
-		shader->setUniform("u_num_lights", 4);
+		int numlights = lightsScene.size();
+		shader->setUniform1Array("u_light_type", (int*)&light_types, numlights);
+		shader->setUniform3Array("u_light_pos", (float*)&light_position, numlights);
+		shader->setUniform3Array("u_light_target", (float*)&light_target, numlights);
+		shader->setUniform3Array("u_light_color", (float*)&light_color, numlights);
+		shader->setUniform1Array("u_light_max_dists", (float*)&light_maxdists, numlights);
+		shader->setUniform1Array("u_light_coscutoff", (float*)&light_coscutoff, numlights);
+		shader->setUniform1Array("u_light_spotexp", (float*)&light_spotexponent, numlights);
+		shader->setUniform1Array("u_light_spotexp", (float*)&light_intensity, numlights);
+		shader->setUniform("u_num_lights", numlights);
 		//do the draw call that renders the mesh into the screen
 		mesh->render(GL_TRIANGLES);
 	}

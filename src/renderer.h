@@ -82,6 +82,7 @@ namespace GTR {
 		Vector3 light_target[5];
 		Vector3 light_color[5];
 
+		float light_intensity[5];
 		float light_maxdists[5];
 		float light_coscutoff[5];
 		float light_spotexponent[5];

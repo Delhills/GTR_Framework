@@ -220,6 +220,7 @@ uniform sampler2D u_normalmap;
 uniform int u_light_type[MAX_LIGHTS];
 uniform vec3 u_light_pos[MAX_LIGHTS];
 uniform vec3 u_light_color[MAX_LIGHTS];
+uniform vec3 u_light_intensity[MAX_LIGHTS];
 uniform vec3 u_light_target[MAX_LIGHTS];
 uniform float u_light_max_dists[MAX_LIGHTS];
 uniform float u_light_coscutoff[MAX_LIGHTS];
@@ -289,7 +290,7 @@ void main()
 				}
 			}
 			float NdotL = clamp( dot(L,N), 0.0, 1.0);
-			light += NdotL * u_light_color[i] * att_factor * spotFactor;
+			light += NdotL * u_light_color[i] * u_light_intensity[i] * att_factor * spotFactor;
 		}
 	}
 
@@ -307,6 +308,7 @@ void main()
 uniform vec3 u_light_pos;
 uniform vec3 u_light_color;
 uniform vec3 u_light_target;
+uniform float u_light_intensity;
 uniform float u_light_max_dists;
 uniform float u_light_coscutoff;
 uniform float u_light_spotexp;
@@ -412,7 +414,7 @@ void main()
 
 	float NdotL = clamp( dot(L,N), 0.0, 1.0);
 	
-	light += NdotL * u_light_color * att_factor * spotFactor * shadow_factor;
+	light += NdotL * u_light_color * u_light_intensity * att_factor * spotFactor * shadow_factor;
 
 	color.xyz *= light;
 
@@ -735,10 +737,10 @@ void main()
 	vec3 lightParams;
 
 	if(hdr){
-		lightParams = degamma(u_light_color) * att_factor * shadow_factor * spotFactor;
+		lightParams = degamma(u_light_color) * u_light_intensity * att_factor * shadow_factor * spotFactor;
 	}
 	else{
-		lightParams = u_light_color * att_factor * shadow_factor * spotFactor;
+		lightParams = u_light_color * u_light_intensity * att_factor * shadow_factor * spotFactor;
 	};
 	light += direct * lightParams;
 
