@@ -27,6 +27,7 @@ Renderer::Renderer() {
 
 	render_mode = eRenderMode::DEFAULT;
 	pipeline_mode = ePipelineMode::DEFERRED;
+	blend_mode = DITHERING;
 	fbo.create(w,
 				h,
 				1,
@@ -102,18 +103,10 @@ void Renderer::renderDeferred(GTR::Scene* scene, std::vector <renderCall>& rende
 							GL_RGBA,
 							GL_FLOAT);
 	}
+
 	gbuffers_fbo.bind();
 
-	glClearColor(scene->background_color.x, scene->background_color.y, scene->background_color.z, 1.0);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	glEnable(GL_DEPTH_TEST);
-	checkGLErrors();
-
-	for (size_t i = 0; i < rendercalls.size(); i++)
-	{
-		renderCall& rc = rendercalls[i];
-		renderMeshWithMaterial(eRenderMode::GBUFFERS, scene, rc.model, rc.mesh, rc.material, rc.camera);
-	}
+	renderGBuffers(scene, rendercalls);
 	
 	gbuffers_fbo.unbind();
 
@@ -126,7 +119,9 @@ void Renderer::renderDeferred(GTR::Scene* scene, std::vector <renderCall>& rende
 	ssao.apply(gbuffers_fbo.depth_texture, gbuffers_fbo.color_textures[1], camera, ao_buffer);
 	ssao.blurTexture(ao_buffer, ao_blur_buffer);
 
-	viewFBO(&fbo, &gbuffers_fbo, camera, scene, hdr, ao_buffer);
+	fbo.bind();	//textura final pre hdr
+	renderFinalFBO(&gbuffers_fbo, camera, scene, hdr, ao_buffer, rendercalls);
+	fbo.unbind();
 
 	Shader* final_shader = Shader::Get("tonemapper"); //este aplica tonemapper
 
@@ -150,9 +145,7 @@ void Renderer::renderDeferred(GTR::Scene* scene, std::vector <renderCall>& rende
 		ao_blur_buffer->toViewport();
 }
 
-void Renderer::viewFBO(FBO* fbo, FBO* gbuffers_fbo, Camera* camera, GTR::Scene* scene, bool hdr, Texture* ao_buffer) {
-
-	fbo->bind(); //textura final pre hdr
+void Renderer::renderFinalFBO(FBO* gbuffers_fbo, Camera* camera, GTR::Scene* scene, bool hdr, Texture* ao_buffer, std::vector <renderCall>& rendercalls) {
 
 	glClearColor(0, 0, 0, 0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -188,12 +181,22 @@ void Renderer::viewFBO(FBO* fbo, FBO* gbuffers_fbo, Camera* camera, GTR::Scene* 
 		shader->disable();
 	}
 
+	if (blend_mode == FORWARD_BLEND) {
+		gbuffers_fbo->depth_texture->copyTo(NULL);
+		for (size_t i = 0; i < rendercalls.size(); i++)
+		{
+			renderCall& rc = rendercalls[i];
+			if (rc.material->alpha_mode == eAlphaMode::BLEND)
+				renderMeshWithMaterial(eRenderMode::DEFAULT, scene, rc.model, rc.mesh, rc.material, rc.camera);
+		}
+
+	}
+
 	glDisable(GL_BLEND);
 	glDisable(GL_DEPTH_TEST);
 
 	renderProbe(Vector3(0, 2, 0), 2, probe.sh.coeffs[0].v);
 
-	fbo->unbind();
 }
 
 void Renderer::view_gbuffers(FBO* gbuffers_fbo, float w, float h, Camera* camera) {
@@ -424,6 +427,9 @@ void Renderer::renderMeshWithMaterial(eRenderMode mode, GTR::Scene* scene, const
 		return;
 	shader->enable();
 
+	if (blend_mode == DITHERING) shader->setUniform("u_dithering", true);
+	if (blend_mode == FORWARD_BLEND) shader->setUniform("u_dithering", false);
+
 	//upload uniforms
 	shader->setUniform("u_viewprojection", camera->viewprojection_matrix);
 	shader->setUniform("u_camera_position", camera->eye);
@@ -560,7 +566,7 @@ void Renderer::renderSceneShadowmaps(GTR::Scene* scene)
 		Camera* light_cam = &light->camera;
 
 		//light_cam->enable();
-		renderScene(scene, light_cam, FORWARD);
+		renderScene(scene, light_cam, GTR::ePipelineMode::FORWARD);
 
 		light->fbo->unbind();
 		glColorMask(true, true, true, true);
@@ -659,9 +665,26 @@ void GTR::Renderer::renderInMenu() {
 			ImGui::SliderFloat("White luminance", &lum_white, 0.0, 2.0);
 			ImGui::SliderFloat("Scale tonemap", &scale_tm, 0.001, 2.0);
 		}
+		ImGui::Combo("Blend", (int*)&blend_mode, "DITHERING\0FORWARD", 2);
 	}
 }
 
+
+void GTR::Renderer::renderGBuffers(Scene* scene, std::vector <renderCall>& rendercalls)
+{
+	glClearColor(scene->background_color.x, scene->background_color.y, scene->background_color.z, 1.0);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glEnable(GL_DEPTH_TEST);
+	checkGLErrors();
+
+	for (size_t i = 0; i < rendercalls.size(); i++)
+	{
+		renderCall& rc = rendercalls[i];
+		if (blend_mode == FORWARD_BLEND && rc.material->alpha_mode == eAlphaMode::BLEND)
+			continue;
+		renderMeshWithMaterial(eRenderMode::GBUFFERS, scene, rc.model, rc.mesh, rc.material, rc.camera);
+	}
+}
 
 void Renderer::renderProbe(Vector3 pos, float size, float* coeffs)
 {

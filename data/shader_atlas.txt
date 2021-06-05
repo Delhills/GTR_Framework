@@ -479,6 +479,8 @@ uniform float u_roughness_factor;
 uniform float u_time;
 uniform float u_alpha_cutoff;
 
+uniform bool u_dithering;
+
 uniform vec3 u_ambient_light;
 
 layout(location = 0) out vec4 FragColor;
@@ -494,8 +496,14 @@ void main()
 	vec4 color = u_color;
 	color *= texture( u_texture, v_uv );
 
-	if(color.a < 0.9 && dither4x4( gl_FragCoord.xy, color.a) == 0.0)
-		discard;
+	if (u_dithering){
+		if(color.a < 0.9 && dither4x4( gl_FragCoord.xy, color.a) == 0.0)
+			discard;
+	}
+	else{
+		if(color.a < u_alpha_cutoff)
+			discard;
+	}
 
 	
 	vec3 metallic_roughness = texture2D(u_metallic_roughness_texture, v_uv ).xyz;

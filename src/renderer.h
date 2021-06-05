@@ -24,6 +24,12 @@ namespace GTR {
 		DEFERRED
 	};
 
+
+	enum eBlendMode {
+		DITHERING,
+		FORWARD_BLEND
+	};
+
 	class Prefab;
 	class Material;
 
@@ -76,6 +82,8 @@ namespace GTR {
 
 		eRenderMode render_mode;
 		ePipelineMode pipeline_mode;
+		eBlendMode blend_mode;
+
 		eLightType light_types[5];
 
 		Vector3 light_position[5];
@@ -135,6 +143,8 @@ namespace GTR {
 
 		void renderMeshInShadowMap(Material* material, Camera* camera, Matrix44 model, Mesh* mesh, Texture* texture);
 
+		void renderGBuffers(GTR::Scene* scene, std::vector <renderCall>& rendercalls);
+
 		void renderToFbo(GTR::Scene* scene, GTR::LightEntity* light);
 		//void renderToFbo(GTR::Scene* scene, Camera* camera);
 		void renderInMenu();
@@ -143,8 +153,9 @@ namespace GTR {
 		void extractProbe(GTR::Scene* scene, sProbe p);
 		void UpdateIrradianceCache(GTR::Scene* scene);
 
+
 		void view_gbuffers(FBO* gbuffers_fbo, float w, float h, Camera* camera);
-		void viewFBO(FBO* fbo, FBO* gbuffers_fbo, Camera* camera, GTR::Scene* scene, bool hdr, Texture* ao_buffer);
+		void renderFinalFBO(FBO* gbuffers_fbo, Camera* camera, GTR::Scene* scene, bool hdr, Texture* ao_buffer, std::vector <renderCall>& rendercalls);
 		void setUniformsLight(LightEntity* light, Camera* camera, GTR::Scene* scene, Texture* ao_buffer, Shader* shader, bool hdr, FBO* gbuffers_fbo, bool first_iter);
 
 	};
