@@ -65,7 +65,7 @@ void Renderer::render(GTR::Scene* scene, Camera* camera) {
 
 		if (showCameraDirectional) renderToFbo(scene, scene->lights[3]);
 		else renderToFbo(scene, scene->lights[0]);
-		
+
 	}
 	else {
 		//renderToFbo(scene, camera, &fbo);
@@ -92,12 +92,12 @@ void Renderer::renderForward(GTR::Scene* scene, std::vector <renderCall>& render
 }
 
 void Renderer::renderDeferred(GTR::Scene* scene, std::vector <renderCall>& rendercalls, Camera* camera) {
-	
+
 	int w = Application::instance->window_width;
 	int h = Application::instance->window_height;
-	
+
 	if (gbuffers_fbo.fbo_id == 0) {
-		gbuffers_fbo.create(w, 
+		gbuffers_fbo.create(w,
 							h,
 							3,
 							GL_RGBA,
@@ -107,7 +107,7 @@ void Renderer::renderDeferred(GTR::Scene* scene, std::vector <renderCall>& rende
 	gbuffers_fbo.bind();
 
 	renderGBuffers(scene, rendercalls);
-	
+
 	gbuffers_fbo.unbind();
 
 	if (!ao_buffer)
@@ -129,8 +129,8 @@ void Renderer::renderDeferred(GTR::Scene* scene, std::vector <renderCall>& rende
 	final_shader->setUniform("u_average_lum", average_lum);
 	final_shader->setUniform("u_lumwhite2", lum_white * lum_white);
 	final_shader->setUniform("u_scale", scale_tm);
-	
-	if (hdr) 
+
+	if (hdr)
 		fbo.color_textures[0]->toViewport(final_shader);
 	else
 		fbo.color_textures[0]->toViewport();
@@ -451,7 +451,7 @@ void Renderer::renderMeshWithMaterial(eRenderMode mode, GTR::Scene* scene, const
 	if (metallic_roughness_texture)
 		shader->setUniform("u_metallic_roughness_texture", metallic_roughness_texture, 1);
 	if(emmisive_texture)
-		shader->setUniform("u_emmisive_texture", emmisive_texture, 2);	
+		shader->setUniform("u_emmisive_texture", emmisive_texture, 2);
 	if(normalmap)
 		shader->setUniform("u_normalmap", normalmap, 3);
 
@@ -512,7 +512,7 @@ void Renderer::renderMeshWithMaterial(eRenderMode mode, GTR::Scene* scene, const
 	}
 
 	else {
-		mesh->render(GL_TRIANGLES);	
+		mesh->render(GL_TRIANGLES);
 	}
 
 
@@ -552,7 +552,7 @@ void Renderer::renderSceneShadowmaps(GTR::Scene* scene)
 	for (size_t i = 0; i < lightsScene.size() && i < 5; i++) {
 		GTR::LightEntity* light = lightsScene[i];
 		if (!light->cast_shadows) continue;
-		
+
 		if (!light->fbo) {
 			light->fbo = new FBO();
 			light->fbo->setDepthOnly(1024, 1024);
@@ -755,19 +755,27 @@ void Renderer::UpdateIrradianceCache(GTR::Scene* scene) {
 
 Texture* GTR::CubemapFromHDRE(const char* filename)
 {
-	HDRE* hdre = new HDRE();
-	if (!hdre->load(filename))
-	{
-		delete hdre;
+	HDRE* hdre = HDRE::Get(filename);
+	if (!hdre)
 		return NULL;
-	}
 
-	/*
 	Texture* texture = new Texture();
-	texture->createCubemap(hdre->width, hdre->height, (Uint8**)hdre->getFaces(0), hdre->header.numChannels == 3 ? GL_RGB : GL_RGBA, GL_FLOAT );
-	for(int i = 1; i < 6; ++i)
-		texture->uploadCubemap(texture->format, texture->type, false, (Uint8**)hdre->getFaces(i), GL_RGBA32F, i);
+	if (hdre->getFacesf(0))
+	{
+		texture->createCubemap(hdre->width, hdre->height, (Uint8**)hdre->getFacesf(0),
+			hdre->header.numChannels == 3 ? GL_RGB : GL_RGBA, GL_FLOAT);
+		for (int i = 1; i < hdre->levels; ++i)
+			texture->uploadCubemap(texture->format, texture->type, false,
+				(Uint8**)hdre->getFacesf(i), GL_RGBA32F, i);
+	}
+	else
+		if (hdre->getFacesh(0))
+		{
+			texture->createCubemap(hdre->width, hdre->height, (Uint8**)hdre->getFacesh(0),
+				hdre->header.numChannels == 3 ? GL_RGB : GL_RGBA, GL_HALF_FLOAT);
+			for (int i = 1; i < hdre->levels; ++i)
+				texture->uploadCubemap(texture->format, texture->type, false,
+					(Uint8**)hdre->getFacesh(i), GL_RGBA16F, i);
+		}
 	return texture;
-	*/
-	return NULL;
 }
