@@ -102,6 +102,7 @@ namespace GTR {
 		bool show_gbuffers = false;
 		bool showCameraDirectional = false;
 		bool show_ao_buffer = false;
+		bool show_depthfbo = false;
 
 		float average_lum;
 		float lum_white;

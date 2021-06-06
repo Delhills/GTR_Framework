@@ -33,7 +33,7 @@ Renderer::Renderer() {
 				1,
 				GL_RGBA,
 				GL_FLOAT,
-				false);
+				true);
 	FBO* irr_fbo = NULL;
 
 	memset(&probe, 0, sizeof(probe));
@@ -143,6 +143,17 @@ void Renderer::renderDeferred(GTR::Scene* scene, std::vector <renderCall>& rende
 		view_gbuffers(&gbuffers_fbo, w, h, camera);
 	else if (show_ao_buffer)
 		ao_blur_buffer->toViewport();
+	else if (show_depthfbo) {
+		Shader* depthShader = Shader::Get("depth");
+
+		depthShader->enable();
+		depthShader->setUniform("u_camera_nearfar", Vector2(camera->near_plane, camera->far_plane));
+
+		fbo.depth_texture->toViewport(depthShader);
+		depthShader->disable();
+
+		glViewport(0, 0, w, h);
+	}
 }
 
 void Renderer::renderFinalFBO(FBO* gbuffers_fbo, Camera* camera, GTR::Scene* scene, bool hdr, Texture* ao_buffer, std::vector <renderCall>& rendercalls) {
@@ -160,7 +171,7 @@ void Renderer::renderFinalFBO(FBO* gbuffers_fbo, Camera* camera, GTR::Scene* sce
 	Mesh* sphere = Mesh::Get("data/meshes/sphere.obj", true);
 	Mesh* quad = Mesh::getQuad();
 
-
+	gbuffers_fbo->depth_texture->copyTo(NULL);
 
 	for (size_t i = 0; i < scene->lights.size(); i++) {
 
@@ -182,12 +193,11 @@ void Renderer::renderFinalFBO(FBO* gbuffers_fbo, Camera* camera, GTR::Scene* sce
 	}
 
 	if (blend_mode == FORWARD_BLEND) {
-		gbuffers_fbo->depth_texture->copyTo(NULL);
 		for (size_t i = 0; i < rendercalls.size(); i++)
 		{
 			renderCall& rc = rendercalls[i];
-			if (rc.material->alpha_mode == eAlphaMode::BLEND)
-				renderMeshWithMaterial(eRenderMode::DEFAULT, scene, rc.model, rc.mesh, rc.material, rc.camera);
+			if (rc.material->alpha_mode != eAlphaMode::BLEND) continue;
+			renderMeshWithMaterial(eRenderMode::DEFAULT, scene, rc.model, rc.mesh, rc.material, rc.camera);
 		}
 
 	}
@@ -659,6 +669,7 @@ void GTR::Renderer::renderInMenu() {
 	if (pipeline_mode == GTR::ePipelineMode::DEFERRED) {
 		ImGui::Checkbox("Show gbuffers", &show_gbuffers);
 		ImGui::Checkbox("Show SSAO", &show_ao_buffer);
+		ImGui::Checkbox("Show depth fbo", &show_depthfbo);
 		ImGui::Checkbox("Apply tonemap", &hdr);
 		if (hdr) {
 			ImGui::SliderFloat("Average luminance", &average_lum, 0.0, 2.0);
