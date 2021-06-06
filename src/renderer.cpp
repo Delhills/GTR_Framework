@@ -193,6 +193,8 @@ void Renderer::renderFinalFBO(FBO* gbuffers_fbo, Camera* camera, GTR::Scene* sce
 	}
 
 	if (blend_mode == FORWARD_BLEND) {
+		glEnable(GL_BLEND);
+		glEnable(GL_DEPTH_TEST);
 		for (size_t i = 0; i < rendercalls.size(); i++)
 		{
 			renderCall& rc = rendercalls[i];
