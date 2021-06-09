@@ -250,10 +250,10 @@ void GTR::LightEntity::renderInMenu()
 
 void GTR::LightEntity::setLightUniforms(Shader* shader, bool useshadowmap)
 {
-	if (useshadowmap)
+	if (useshadowmap && fbo)
 	{
 		Texture* shadowmap = fbo->depth_texture;
-		if (cast_shadows && fbo)
+		if (cast_shadows)
 		{
 			shader->setTexture("u_shadowmap", shadowmap, 4);
 			shader->setUniform("u_shadow_viewproj", camera.viewprojection_matrix);

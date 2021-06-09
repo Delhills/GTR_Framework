@@ -34,7 +34,7 @@ Renderer::Renderer() {
 				GL_RGBA,
 				GL_FLOAT,
 				true);
-	FBO* irr_fbo = NULL;
+	irr_fbo = NULL;
 
 	memset(&probe, 0, sizeof(probe));
 
@@ -101,7 +101,7 @@ void Renderer::renderDeferred(GTR::Scene* scene, std::vector <renderCall>& rende
 							h,
 							3,
 							GL_RGBA,
-							GL_FLOAT);
+							GL_UNSIGNED_BYTE);
 	}
 
 	gbuffers_fbo.bind();
@@ -116,8 +116,11 @@ void Renderer::renderDeferred(GTR::Scene* scene, std::vector <renderCall>& rende
 	if (!ao_blur_buffer)
 		ao_blur_buffer = new Texture(w, h, GL_LUMINANCE, GL_UNSIGNED_BYTE);
 
-	ssao.apply(gbuffers_fbo.depth_texture, gbuffers_fbo.color_textures[1], camera, ao_buffer);
-	ssao.blurTexture(ao_buffer, ao_blur_buffer);
+	if (apply_ssao)
+	{
+		ssao.apply(gbuffers_fbo.depth_texture, gbuffers_fbo.color_textures[1], camera, ao_buffer);
+		ssao.blurTexture(ao_buffer, ao_blur_buffer);
+	}
 
 	fbo.bind();	//textura final pre hdr
 	renderFinalFBO(&gbuffers_fbo, camera, scene, hdr, ao_buffer, rendercalls);
@@ -199,7 +202,7 @@ void Renderer::renderFinalFBO(FBO* gbuffers_fbo, Camera* camera, GTR::Scene* sce
 		{
 			renderCall& rc = rendercalls[i];
 			if (rc.material->alpha_mode != eAlphaMode::BLEND) continue;
-			renderMeshWithMaterial(eRenderMode::DEFAULT, scene, rc.model, rc.mesh, rc.material, rc.camera);
+			renderMeshWithMaterial(eRenderMode::SINGLE, scene, rc.model, rc.mesh, rc.material, rc.camera);
 		}
 
 	}
@@ -247,7 +250,13 @@ void Renderer::setUniformsLight(LightEntity* light, Camera* camera, GTR::Scene* 
 	shader->setTexture("u_normal_texture", gbuffers_fbo->color_textures[1], 1);
 	shader->setTexture("u_extra_texture", gbuffers_fbo->color_textures[2], 2);
 	shader->setTexture("u_depth_texture", gbuffers_fbo->depth_texture, 3);
-	shader->setUniform("u_ambient_light", scene->ambient_light);
+	if (first_iter)
+	{
+		shader->setUniform("u_ambient_light", scene->ambient_light);
+	}
+	else {
+		shader->setUniform("u_ambient_light", Vector3());
+	}
 
 	shader->setUniform("u_first_iter", first_iter);
 
@@ -255,8 +264,11 @@ void Renderer::setUniformsLight(LightEntity* light, Camera* camera, GTR::Scene* 
 		light->setLightUniforms(shader, false);
 	else
 		light->setLightUniforms(shader, true);
-
-	shader->setTexture("u_ao_texture", ao_buffer, 5);
+	if (apply_ssao)
+	{
+		shader->setTexture("u_ao_texture", ao_buffer, 5);
+	}
+	shader->setUniform("u_apply_ssao", apply_ssao);
 }
 
 void Renderer::renderToFbo(GTR::Scene* scene, LightEntity* light) {
@@ -294,8 +306,10 @@ void Renderer::collectRenderCalls(GTR::Scene* scene, Camera* camera) {
 				getRenderCallsFromPrefabs(ent->model, pent->prefab, camera);
 		}
 	}
-
-	std::sort(renderCallList.begin(), renderCallList.end(), compareNodes);
+	if (camera)
+	{
+		std::sort(renderCallList.begin(), renderCallList.end(), compareNodes);
+	}
 }
 
 
@@ -333,11 +347,17 @@ void Renderer::getRenderCallsFromNode(const Matrix44& prefab_model, GTR::Node* n
 		BoundingBox world_bounding = transformBoundingBox(node_model,node->mesh->box);
 
 		//if bounding box is inside the camera frustum then the object is probably visible
-		if (camera->testBoxInFrustum(world_bounding.center, world_bounding.halfsize) )
+		if (!camera || camera->testBoxInFrustum(world_bounding.center, world_bounding.halfsize) )
 		{
 			//render node mesh
 			//renderMeshWithMaterial( node_model, node->mesh, node->material, camera );
-			addRenderCalltoList(node_model, node->mesh, node->material, camera, camera->eye.distance(world_bounding.center)); //uso el centro de la bounding box para la distancia,
+
+			float dist = NULL;
+			if (camera)
+			{
+				dist = camera->eye.distance(world_bounding.center);
+			}
+			addRenderCalltoList(node_model, node->mesh, node->material, camera, dist); //uso el centro de la bounding box para la distancia,
 						  //el resto es de la llamada normal, el alpha va en el material
 			//node->mesh->renderBounding(node_model, true);
 		}
@@ -734,7 +754,7 @@ void Renderer::extractProbe(GTR::Scene* scene, sProbe p)
 
 	if (!irr_fbo) {
 		irr_fbo = new FBO();
-		irr_fbo->create(64, 64, GL_RGB, GL_FLOAT);
+		irr_fbo->create(64, 64, 1, GL_RGB, GL_FLOAT);
 	}
 
 	collectRenderCalls(scene, NULL);
