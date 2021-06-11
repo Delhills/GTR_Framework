@@ -233,7 +233,6 @@ void GTR::LightEntity::renderInMenu()
 		ImGui::SliderFloat("Spot exponent", &spot_exponent, 0, 100);
 		ImGui::SliderFloat("Shadow bias", &shadow_bias, -1.00000, 1.00000);
 		Vector3 lightpos = model.getTranslation();
-		//camera.lookAt(lightpos, lightpos + this->model.frontVector(), Vector3(0, 1.001, 0));
 		camera.lookAt(lightpos, lightpos + model.frontVector(), model.topVector());
 	}
 	if (light_type == GTR::eLightType::DIRECTIONAL)
@@ -241,7 +240,6 @@ void GTR::LightEntity::renderInMenu()
 		ImGui::SliderFloat("Area size", &area_size, 0, 2000);
 		ImGui::SliderFloat("Shadow bias", &shadow_bias, 0.00000, 1.00000);
 		Vector3 lightpos = model.getTranslation();
-		//camera.lookAt(lightpos, lightpos + this->model.frontVector(), Vector3(0, 1.001, 0));
 		camera.lookAt(lightpos, lightpos + model.frontVector(), model.topVector());
 		camera.setOrthographic(-area_size, area_size, -area_size, area_size, 0.1f, 5000.f);
 	}

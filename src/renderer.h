@@ -79,6 +79,7 @@ namespace GTR {
 		FBO* irr_fbo;
 
 		bool rendering_shadowmap;
+		bool show_irr_fbo = false;
 
 		eRenderMode render_mode;
 		ePipelineMode pipeline_mode;
@@ -103,7 +104,7 @@ namespace GTR {
 		bool showCameraDirectional = false;
 		bool show_ao_buffer = false;
 		bool show_depthfbo = false;
-		bool apply_ssao = false;
+		bool apply_ssao = true;
 
 		float average_lum;
 		float lum_white;
@@ -121,8 +122,6 @@ namespace GTR {
 		void addRenderCalltoList(const Matrix44 model, Mesh* mesh, GTR::Material* material, Camera* camera, float dist);
 
 		void render(GTR::Scene* scene, Camera* camera);
-
-		void renderScene(GTR::Scene* scene, Camera* camera);
 
 		void collectRenderCalls(GTR::Scene* scene, Camera* camera);
 

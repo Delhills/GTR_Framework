@@ -311,6 +311,7 @@ void Application::onKeyDown( SDL_KeyboardEvent event )
 		case SDLK_6: renderer->hdr = !renderer->hdr; break;
 		case SDLK_7: renderer->show_ao_buffer = !renderer->show_ao_buffer; break;
 		case SDLK_0: renderer->UpdateIrradianceCache(scene); break;
+		case SDLK_v: renderer->show_irr_fbo = !renderer->show_irr_fbo; break;
 	}
 }
 
