@@ -18,7 +18,7 @@ namespace GTR {
 		SINGLE,
 		GBUFFERS
 	};
-	
+
 	enum ePipelineMode {
 		FORWARD,
 		DEFERRED
@@ -33,7 +33,7 @@ namespace GTR {
 	class Prefab;
 	class Material;
 
-	struct renderCall { //recuerda añadir el tipo (prefab, ...)
+	struct renderCall { //recuerda aï¿½adir el tipo (prefab, ...)
 		Matrix44 model;
 		Mesh* mesh;
 		Material* material;
@@ -78,6 +78,7 @@ namespace GTR {
 		FBO* irr_fbo;
 
 		bool rendering_shadowmap;
+		bool show_irr_fbo = false;
 
 		eRenderMode render_mode;
 		ePipelineMode pipeline_mode;
@@ -121,8 +122,6 @@ namespace GTR {
 
 		void render(GTR::Scene* scene, Camera* camera);
 
-		void renderScene(GTR::Scene* scene, Camera* camera);
-
 		void collectRenderCalls(GTR::Scene* scene, Camera* camera);
 
 		void renderScene(GTR::Scene* scene, Camera* camera, ePipelineMode pipmode);
@@ -130,7 +129,7 @@ namespace GTR {
 		void renderForward(GTR::Scene* scene, std::vector <renderCall>& rendercalls, Camera* camera);
 
 		void renderDeferred(GTR::Scene* scene, std::vector <renderCall>& rendercalls, Camera* camera);
-	
+
 		//to render a whole prefab (with all its nodes)
 		void getRenderCallsFromPrefabs(const Matrix44& model, GTR::Prefab* prefab, Camera* camera);
 

@@ -28,12 +28,8 @@ Renderer::Renderer() {
 	render_mode = eRenderMode::DEFAULT;
 	pipeline_mode = ePipelineMode::DEFERRED;
 	blend_mode = DITHERING;
-	fbo.create(w,
-				h,
-				1,
-				GL_RGBA,
-				GL_FLOAT,
-				true);
+
+	fbo.create(w, h, 1, GL_RGBA, GL_FLOAT, true);
 
 	memset(&probe, 0, sizeof(probe));
 	probe.pos.set(76, 38, 96);
@@ -203,6 +199,11 @@ void Renderer::renderFinalFBO(FBO* gbuffers_fbo, Camera* camera, GTR::Scene* sce
 
 	renderProbe(probe.pos, 3.0, probe.sh.coeffs[0].v);
 
+	if (irr_fbo && show_irr_fbo) {
+		irr_fbo->color_textures[0]->toViewport();
+	}
+
+
 }
 
 void Renderer::view_gbuffers(FBO* gbuffers_fbo, float w, float h, Camera* camera) {
@@ -298,9 +299,7 @@ void Renderer::collectRenderCalls(GTR::Scene* scene, Camera* camera) {
 		}
 	}
 	if (camera)
-	{
 		std::sort(renderCallList.begin(), renderCallList.end(), compareNodes);
-	}
 }
 
 
@@ -338,9 +337,9 @@ void Renderer::getRenderCallsFromNode(const Matrix44& prefab_model, GTR::Node* n
 		BoundingBox world_bounding = transformBoundingBox(node_model,node->mesh->box);
 
 		//if bounding box is inside the camera frustum then the object is probably visible
-		if (!camera || camera->testBoxInFrustum(world_bounding.center, world_bounding.halfsize) )
+		if (!camera || camera->testBoxInFrustum(world_bounding.center, world_bounding.halfsize))
 		{
-			
+
 			renderCall aux;
 
 			aux.model = node_model;
@@ -380,11 +379,6 @@ void Renderer::renderMeshWithMaterial(eRenderMode mode, GTR::Scene* scene, const
 		return;
 	}
 
-	//texture = material->emissive_texture;
-	//texture = material->metallic_roughness_texture.texture;
-	//texture = material->normal_texture;
-	//texture = material->occlusion_texture;
-
 	Texture* metallic_roughness_texture = material->metallic_roughness_texture.texture;
 	if (metallic_roughness_texture == NULL)
 		metallic_roughness_texture = Texture::getWhiteTexture(); //a 1x1 white texture
@@ -394,7 +388,6 @@ void Renderer::renderMeshWithMaterial(eRenderMode mode, GTR::Scene* scene, const
 	if (emmisive_texture == NULL)
 		emmisive_texture = Texture::getWhiteTexture(); //a 1x1 white texture
 
-
 	Texture* normalmap = material->normal_texture.texture;
 	if (!normalmap) {
 		normalmap = Texture::getWhiteTexture(); //a 1x1 white texture
@@ -403,7 +396,6 @@ void Renderer::renderMeshWithMaterial(eRenderMode mode, GTR::Scene* scene, const
 	//select the blending
 	if (material->alpha_mode == GTR::eAlphaMode::BLEND)
 	{
-		//if (mode == GBUFFERS) return;
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	}
@@ -455,8 +447,11 @@ void Renderer::renderMeshWithMaterial(eRenderMode mode, GTR::Scene* scene, const
 	if (blend_mode == FORWARD_BLEND) shader->setUniform("u_dithering", false);
 
 	//upload uniforms
-	shader->setUniform("u_viewprojection", camera->viewprojection_matrix);
-	shader->setUniform("u_camera_position", camera->eye);
+	if (camera) {
+		shader->setUniform("u_viewprojection", camera->viewprojection_matrix);
+		shader->setUniform("u_camera_position", camera->eye);
+	}
+
 	shader->setUniform("u_model", model );
 	float t = getTime();
 	shader->setUniform("u_time", t );
@@ -467,8 +462,6 @@ void Renderer::renderMeshWithMaterial(eRenderMode mode, GTR::Scene* scene, const
 	shader->setUniform("u_ambient_light", scene->ambient_light);
 
 	std::vector<GTR::LightEntity*> lightsScene = scene->lights;
-
-
 
 	if(texture)
 		shader->setUniform("u_texture", texture, 0);
@@ -726,13 +719,13 @@ void Renderer::renderProbe(Vector3 pos, float size, float* coeffs)
 	model.scale(size, size, size);
 
 	shader->enable();
-	shader->setUniform("u_viewprojection",
-		camera->viewprojection_matrix);
+	shader->setUniform("u_viewprojection", camera->viewprojection_matrix);
 	shader->setUniform("u_camera_position", camera->eye);
 	shader->setUniform("u_model", model);
 	shader->setUniform3Array("u_coeffs", coeffs, 9);
 
 	mesh->render(GL_TRIANGLES);
+
 }
 
 
@@ -751,7 +744,7 @@ void Renderer::extractProbe(GTR::Scene* scene, sProbe& p) {
 	collectRenderCalls(scene, NULL);
 	std::cout << renderCallList.size() << "\n";
 
-	for (int i = 0; i < 6; ++i) //for every cubemap face
+	for (int i = 0; i < 6; i++) //for every cubemap face
 	{
 		//compute camera orientation using defined vectors
 		Vector3 eye = p.pos;
@@ -771,7 +764,7 @@ void Renderer::extractProbe(GTR::Scene* scene, sProbe& p) {
 	}
 
 	//compute the coefficients given the six images
-	p.sh = computeSH(images, false);
+	p.sh = computeSH(images, 1.0);
 }
 
 void GTR::Renderer::updateIrradianceCache(GTR::Scene* scene) {
