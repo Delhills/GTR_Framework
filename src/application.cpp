@@ -310,7 +310,8 @@ void Application::onKeyDown( SDL_KeyboardEvent event )
 		case SDLK_5: renderer->pipeline_mode = GTR::ePipelineMode::FORWARD; break;
 		case SDLK_6: renderer->hdr = !renderer->hdr; break;
 		case SDLK_7: renderer->show_ao_buffer = !renderer->show_ao_buffer; break;
-		case SDLK_0: renderer->UpdateIrradianceCache(scene); break;
+		case SDLK_0: renderer->updateIrradianceCache(scene); break;
+		case SDLK_m: renderer->show_irr_fbo = !renderer->show_irr_fbo; break;
 	}
 }
 

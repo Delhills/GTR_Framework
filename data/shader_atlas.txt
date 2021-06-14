@@ -1130,7 +1130,11 @@ vec3 ComputeSHIrradiance(in vec3 normal, in SH9Color sh)
 
 \probe.fs
 
+
 #version 330 core
+
+#include "sh"
+
 in vec3 v_position;
 in vec3 v_world_position;
 in vec3 v_normal;
@@ -1138,7 +1142,6 @@ in vec3 v_normal;
 uniform vec3 u_coeffs[9];
 
 out vec4 FragColor;
-#include "sh"
 
 void main()
 {

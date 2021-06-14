@@ -34,26 +34,13 @@ Renderer::Renderer() {
 				GL_RGBA,
 				GL_FLOAT,
 				true);
-	irr_fbo = NULL;
 
 	memset(&probe, 0, sizeof(probe));
-
+	probe.pos.set(76, 38, 96);
 	probe.sh.coeffs[0].set(1, 0, 0);
-	probe.sh.coeffs[1].set(1, 1, 0);
-}
+	probe.sh.coeffs[1].set(0, 1, 0);
 
-void Renderer::addRenderCalltoList(const Matrix44 model, Mesh* mesh, GTR::Material* material, Camera* camera, float dist) {
-
-	renderCall aux;
-
-	aux.model = model;
-	aux.mesh = mesh;
-	aux.material = material;
-	aux.camera = camera;
-	aux.distance_to_cam = dist;
-
-	this->renderCallList.push_back(aux);
-
+	irr_fbo = NULL;
 }
 
 
@@ -87,7 +74,7 @@ void Renderer::renderForward(GTR::Scene* scene, std::vector <renderCall>& render
 	for (size_t i = 0; i < rendercalls.size(); i++)
 	{
 		renderCall& rc = rendercalls[i];
-		renderMeshWithMaterial(render_mode, scene, rc.model, rc.mesh, rc.material, rc.camera);
+		renderMeshWithMaterial(render_mode, scene, rc.model, rc.mesh, rc.material, camera);
 	}
 }
 
@@ -106,7 +93,7 @@ void Renderer::renderDeferred(GTR::Scene* scene, std::vector <renderCall>& rende
 
 	gbuffers_fbo.bind();
 
-	renderGBuffers(scene, rendercalls);
+	renderGBuffers(scene, rendercalls, camera);
 
 	gbuffers_fbo.unbind();
 
@@ -157,6 +144,10 @@ void Renderer::renderDeferred(GTR::Scene* scene, std::vector <renderCall>& rende
 
 		glViewport(0, 0, w, h);
 	}
+
+	else if (irr_fbo && show_irr_fbo) {
+		irr_fbo->color_textures[0]->toViewport();
+	}
 }
 
 void Renderer::renderFinalFBO(FBO* gbuffers_fbo, Camera* camera, GTR::Scene* scene, bool hdr, Texture* ao_buffer, std::vector <renderCall>& rendercalls) {
@@ -202,7 +193,7 @@ void Renderer::renderFinalFBO(FBO* gbuffers_fbo, Camera* camera, GTR::Scene* sce
 		{
 			renderCall& rc = rendercalls[i];
 			if (rc.material->alpha_mode != eAlphaMode::BLEND) continue;
-			renderMeshWithMaterial(eRenderMode::SINGLE, scene, rc.model, rc.mesh, rc.material, rc.camera);
+			renderMeshWithMaterial(eRenderMode::SINGLE, scene, rc.model, rc.mesh, rc.material, camera);
 		}
 
 	}
@@ -210,7 +201,7 @@ void Renderer::renderFinalFBO(FBO* gbuffers_fbo, Camera* camera, GTR::Scene* sce
 	glDisable(GL_BLEND);
 	glDisable(GL_DEPTH_TEST);
 
-	renderProbe(Vector3(0, 2, 0), 2, probe.sh.coeffs[0].v);
+	renderProbe(probe.pos, 3.0, probe.sh.coeffs[0].v);
 
 }
 
@@ -349,17 +340,18 @@ void Renderer::getRenderCallsFromNode(const Matrix44& prefab_model, GTR::Node* n
 		//if bounding box is inside the camera frustum then the object is probably visible
 		if (!camera || camera->testBoxInFrustum(world_bounding.center, world_bounding.halfsize) )
 		{
-			//render node mesh
-			//renderMeshWithMaterial( node_model, node->mesh, node->material, camera );
+			
+			renderCall aux;
 
-			float dist = NULL;
-			if (camera)
-			{
-				dist = camera->eye.distance(world_bounding.center);
-			}
-			addRenderCalltoList(node_model, node->mesh, node->material, camera, dist); //uso el centro de la bounding box para la distancia,
-						  //el resto es de la llamada normal, el alpha va en el material
-			//node->mesh->renderBounding(node_model, true);
+			aux.model = node_model;
+			aux.mesh = node->mesh;
+			aux.material = node->material;
+			if(camera)
+				aux.distance_to_cam = camera->eye.distance(world_bounding.center);
+			//uso el centro de la bounding box para la distancia
+
+			this->renderCallList.push_back(aux);
+
 		}
 	}
 
@@ -703,7 +695,7 @@ void GTR::Renderer::renderInMenu() {
 }
 
 
-void GTR::Renderer::renderGBuffers(Scene* scene, std::vector <renderCall>& rendercalls)
+void GTR::Renderer::renderGBuffers(Scene* scene, std::vector <renderCall>& rendercalls, Camera* camera)
 {
 	glClearColor(scene->background_color.x, scene->background_color.y, scene->background_color.z, 1.0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -715,7 +707,7 @@ void GTR::Renderer::renderGBuffers(Scene* scene, std::vector <renderCall>& rende
 		renderCall& rc = rendercalls[i];
 		if (blend_mode == FORWARD_BLEND && rc.material->alpha_mode == eAlphaMode::BLEND)
 			continue;
-		renderMeshWithMaterial(eRenderMode::GBUFFERS, scene, rc.model, rc.mesh, rc.material, rc.camera);
+		renderMeshWithMaterial(eRenderMode::GBUFFERS, scene, rc.model, rc.mesh, rc.material, camera);
 	}
 }
 
@@ -744,8 +736,7 @@ void Renderer::renderProbe(Vector3 pos, float size, float* coeffs)
 }
 
 
-void Renderer::extractProbe(GTR::Scene* scene, sProbe p)
-{
+void Renderer::extractProbe(GTR::Scene* scene, sProbe& p) {
 	FloatImage images[6]; //here we will store the six views
 	Camera cam;
 
@@ -758,6 +749,7 @@ void Renderer::extractProbe(GTR::Scene* scene, sProbe p)
 	}
 
 	collectRenderCalls(scene, NULL);
+	std::cout << renderCallList.size() << "\n";
 
 	for (int i = 0; i < 6; ++i) //for every cubemap face
 	{
@@ -779,10 +771,10 @@ void Renderer::extractProbe(GTR::Scene* scene, sProbe p)
 	}
 
 	//compute the coefficients given the six images
-	p.sh = computeSH(images, 1.0);
+	p.sh = computeSH(images, false);
 }
 
-void Renderer::UpdateIrradianceCache(GTR::Scene* scene) {
+void GTR::Renderer::updateIrradianceCache(GTR::Scene* scene) {
 	extractProbe(scene, probe);
 }
 

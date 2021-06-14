@@ -37,7 +37,6 @@ namespace GTR {
 		Matrix44 model;
 		Mesh* mesh;
 		Material* material;
-		Camera* camera;
 		float distance_to_cam;
 	};
 
@@ -103,7 +102,8 @@ namespace GTR {
 		bool showCameraDirectional = false;
 		bool show_ao_buffer = false;
 		bool show_depthfbo = false;
-		bool apply_ssao = false;
+		bool apply_ssao = true;
+		bool show_irr_fbo = false;
 
 		float average_lum;
 		float lum_white;
@@ -118,7 +118,6 @@ namespace GTR {
 
 		std::vector<renderCall> renderCallList;
 		//renders several elements of the scene
-		void addRenderCalltoList(const Matrix44 model, Mesh* mesh, GTR::Material* material, Camera* camera, float dist);
 
 		void render(GTR::Scene* scene, Camera* camera);
 
@@ -145,15 +144,16 @@ namespace GTR {
 
 		void renderMeshInShadowMap(Material* material, Camera* camera, Matrix44 model, Mesh* mesh, Texture* texture);
 
-		void renderGBuffers(GTR::Scene* scene, std::vector <renderCall>& rendercalls);
+		void renderGBuffers(GTR::Scene* scene, std::vector <renderCall>& rendercalls, Camera* camera);
 
 		void renderToFbo(GTR::Scene* scene, GTR::LightEntity* light);
 		//void renderToFbo(GTR::Scene* scene, Camera* camera);
 		void renderInMenu();
 
 		void renderProbe(Vector3 pos, float size, float* coeffs);
-		void extractProbe(GTR::Scene* scene, sProbe p);
-		void UpdateIrradianceCache(GTR::Scene* scene);
+		void extractProbe(GTR::Scene* scene, sProbe& p);
+
+		void updateIrradianceCache(GTR::Scene* scene);
 
 
 		void view_gbuffers(FBO* gbuffers_fbo, float w, float h, Camera* camera);
