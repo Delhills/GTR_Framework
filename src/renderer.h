@@ -78,7 +78,6 @@ namespace GTR {
 		FBO* irr_fbo;
 
 		bool rendering_shadowmap;
-		bool show_irr_fbo = false;
 
 		eRenderMode render_mode;
 		ePipelineMode pipeline_mode;
@@ -115,6 +114,8 @@ namespace GTR {
 
 		SSAOFX ssao;
 
+		std::vector<sProbe> probes;
+
 		Renderer();
 
 		std::vector<renderCall> renderCallList;
@@ -148,6 +149,8 @@ namespace GTR {
 		void renderToFbo(GTR::Scene* scene, GTR::LightEntity* light);
 		//void renderToFbo(GTR::Scene* scene, Camera* camera);
 		void renderInMenu();
+
+		void defineAndPosGridProbe(GTR::Scene* scene);
 
 		void renderProbe(Vector3 pos, float size, float* coeffs);
 		void extractProbe(GTR::Scene* scene, sProbe& p);

@@ -37,6 +37,8 @@ Renderer::Renderer() {
 	probe.sh.coeffs[1].set(0, 1, 0);
 
 	irr_fbo = NULL;
+
+	defineAndPosGridProbe(GTR::Scene::instance);
 }
 
 
@@ -79,6 +81,7 @@ void Renderer::renderDeferred(GTR::Scene* scene, std::vector <renderCall>& rende
 	int w = Application::instance->window_width;
 	int h = Application::instance->window_height;
 
+
 	if (gbuffers_fbo.fbo_id == 0) {
 		gbuffers_fbo.create(w,
 							h,
@@ -94,10 +97,10 @@ void Renderer::renderDeferred(GTR::Scene* scene, std::vector <renderCall>& rende
 	gbuffers_fbo.unbind();
 
 	if (!ao_buffer)
-		ao_buffer = new Texture(w, h, GL_LUMINANCE, GL_UNSIGNED_BYTE);
+		ao_buffer = new Texture(w, h, GL_RED, GL_UNSIGNED_BYTE);
 
 	if (!ao_blur_buffer)
-		ao_blur_buffer = new Texture(w, h, GL_LUMINANCE, GL_UNSIGNED_BYTE);
+		ao_blur_buffer = new Texture(w, h, GL_RED, GL_UNSIGNED_BYTE);
 
 	if (apply_ssao)
 	{
@@ -197,7 +200,13 @@ void Renderer::renderFinalFBO(FBO* gbuffers_fbo, Camera* camera, GTR::Scene* sce
 	glDisable(GL_BLEND);
 	glDisable(GL_DEPTH_TEST);
 
-	renderProbe(probe.pos, 3.0, probe.sh.coeffs[0].v);
+	int numProbes = probes.size();
+	//now compute the coeffs for every probe
+	for (int iP = 0; iP < numProbes; ++iP)
+	{
+		int probe_index = iP;
+		renderProbe(probes[iP].pos, 3.0, probes[iP].sh.coeffs[0].v);
+	}
 
 	if (irr_fbo && show_irr_fbo) {
 		irr_fbo->color_textures[0]->toViewport();
@@ -704,6 +713,52 @@ void GTR::Renderer::renderGBuffers(Scene* scene, std::vector <renderCall>& rende
 	}
 }
 
+
+void GTR::Renderer::defineAndPosGridProbe(GTR::Scene* scene)
+{
+	//when computing the probes position…
+
+	//define the corners of the axis aligned grid
+	//this can be done using the boundings of our scene
+	Vector3 start_pos(-230, 36, -342);
+	Vector3 end_pos(530, 433, 460);
+
+	//define how many probes you want per dimension -230, 36, -342 //500 433 460
+	Vector3 dim(8, 6, 12);
+
+	//compute the vector from one corner to the other
+	Vector3 delta = (end_pos - start_pos);
+
+	//and scale it down according to the subdivisions
+	//we substract one to be sure the last probe is at end pos
+	delta.x /= (dim.x - 1);
+	delta.y /= (dim.y - 1);
+	delta.z /= (dim.z - 1);
+
+	//now delta give us the distance between probes in every axis
+
+	//lets compute the centers
+	//pay attention at the order at which we add them
+	for (int z = 0; z < dim.z; ++z)
+		for (int y = 0; y < dim.y; ++y)
+			for (int x = 0; x < dim.x; ++x)
+			{
+				sProbe p;
+				p.local.set(x, y, z);
+
+				//index in the linear array
+				p.index = x + y * dim.x + z * dim.x * dim.y;
+
+				//and its position
+				p.pos = start_pos + delta * Vector3(x, y, z);
+				probes.push_back(p);
+			}
+
+	updateIrradianceCache(scene);
+
+}
+
+
 void Renderer::renderProbe(Vector3 pos, float size, float* coeffs)
 {
 	Camera* camera = Camera::current;
@@ -742,7 +797,7 @@ void Renderer::extractProbe(GTR::Scene* scene, sProbe& p) {
 	}
 
 	collectRenderCalls(scene, NULL);
-	std::cout << renderCallList.size() << "\n";
+	//std::cout << renderCallList.size() << "\n";
 
 	for (int i = 0; i < 6; i++) //for every cubemap face
 	{
@@ -768,7 +823,16 @@ void Renderer::extractProbe(GTR::Scene* scene, sProbe& p) {
 }
 
 void GTR::Renderer::updateIrradianceCache(GTR::Scene* scene) {
-	extractProbe(scene, probe);
+
+	int numProbes = probes.size();
+	//now compute the coeffs for every probe
+	for (int iP = 0; iP < numProbes; ++iP)
+	{
+		int probe_index = iP;
+		extractProbe(scene, probes[iP]);
+	}
+
+	//extractProbe(scene, probe);
 }
 
 Texture* GTR::CubemapFromHDRE(const char* filename)
