@@ -111,6 +111,7 @@ namespace GTR {
 
 		Texture* ao_buffer = NULL;
 		Texture* ao_blur_buffer = NULL;
+		Texture* probes_texture = NULL;
 
 		SSAOFX ssao;
 
@@ -155,7 +156,7 @@ namespace GTR {
 		void renderProbe(Vector3 pos, float size, float* coeffs);
 		void extractProbe(GTR::Scene* scene, sProbe& p);
 
-		void updateIrradianceCache(GTR::Scene* scene);
+		void updateIrradianceCache(GTR::Scene* scene, Vector3 dim);
 
 
 		void view_gbuffers(FBO* gbuffers_fbo, float w, float h, Camera* camera);

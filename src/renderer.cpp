@@ -39,6 +39,12 @@ Renderer::Renderer() {
 	irr_fbo = NULL;
 
 	defineAndPosGridProbe(GTR::Scene::instance);
+
+	probes_texture = new Texture(
+		9, //9 coefficients per probe
+		probes.size(), //as many rows as probes
+		GL_RGB, //3 channels per coefficient
+		GL_FLOAT); //they require a high range
 }
 
 
@@ -754,7 +760,8 @@ void GTR::Renderer::defineAndPosGridProbe(GTR::Scene* scene)
 				probes.push_back(p);
 			}
 
-	updateIrradianceCache(scene);
+	updateIrradianceCache(scene, dim);
+
 
 }
 
@@ -822,7 +829,11 @@ void Renderer::extractProbe(GTR::Scene* scene, sProbe& p) {
 	p.sh = computeSH(images, 1.0);
 }
 
-void GTR::Renderer::updateIrradianceCache(GTR::Scene* scene) {
+void GTR::Renderer::updateIrradianceCache(GTR::Scene* scene, Vector3 dim) {
+
+	//we must create the color information for the texture. because every SH are 27 floats in the RGB,RGB,... order, we can create an array of SphericalHarmonics and use it as pixels of the texture
+	SphericalHarmonics* sh_data = NULL;
+	sh_data = new SphericalHarmonics[ dim.x * dim.y * dim.z ];
 
 	int numProbes = probes.size();
 	//now compute the coeffs for every probe
@@ -831,6 +842,32 @@ void GTR::Renderer::updateIrradianceCache(GTR::Scene* scene) {
 		int probe_index = iP;
 		extractProbe(scene, probes[iP]);
 	}
+
+
+	//here we fill the data of the array with our probes in x,y,z order...
+
+	for (int x = 0; x < dim.x; x++)
+	{
+		for (int y = 0; y < dim.y; y++)
+		{
+			for (int z = 0; z < dim.z; z++)
+			{
+
+			}
+		}
+	}
+
+	//now upload the data to the GPU
+	probes_texture->upload( GL_RGB, GL_FLOAT, false, (uint8*)sh_data);
+
+	//disable any texture filtering when reading
+	probes_texture->bind(0);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+
+	//always free memory after allocating it!!!
+	delete[] sh_data;
+
 
 	//extractProbe(scene, probe);
 }
