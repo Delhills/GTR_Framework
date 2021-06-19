@@ -861,7 +861,7 @@ void GTR::Renderer::updateIrradianceCache(GTR::Scene* scene, Vector3 dim) {
 	probes_texture->upload( GL_RGB, GL_FLOAT, false, (uint8*)sh_data);
 
 	//disable any texture filtering when reading
-	probes_texture->bind(0);
+	probes_texture->bind();
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
