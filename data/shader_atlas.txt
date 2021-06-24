@@ -16,7 +16,14 @@ tonemapper quad.vs tonemapper.fs
 deferred_sphere basic.vs deferred.fs
 ssao quad.vs ssao.fs
 blur quad.vs blur.fs
+
 probe basic.vs probe.fs
+
+// FX
+blurFX quad.vs blurFX.fs
+tresholdFX quad.vs tresholdFX.fs
+bloomFX quad.vs bloomFX.fs
+AAFX quad.vs AAFX.fs
 
 \basic.vs
 
@@ -1161,4 +1168,147 @@ void main()
 	vec4 color = vec4(ComputeSHIrradiance(N, sh), 1.0);
 
 	FragColor = color;
+}
+
+\blurFX.fs
+#version 330 core
+
+out vec4 FragColor;
+  
+in vec2 v_uv;
+
+uniform sampler2D u_input;
+  
+uniform bool horizontal;
+uniform float weight[5] = float[] (0.227027, 0.1945946, 0.1216216, 0.054054, 0.016216);
+
+void main()
+{             
+    vec2 tex_offset = 1.0 / textureSize(u_input, 0); // gets size of single texel
+    vec3 result = texture(u_input, v_uv).rgb * weight[0]; // current fragment's contribution
+    if(horizontal)
+    {
+        for(int i = 1; i < 5; ++i)
+        {
+            result += texture(u_input, v_uv + vec2(tex_offset.x * i, 0.0)).rgb * weight[i];
+            result += texture(u_input, v_uv - vec2(tex_offset.x * i, 0.0)).rgb * weight[i];
+        }
+    }
+    else
+    {
+        for(int i = 1; i < 5; ++i)
+        {
+            result += texture(u_input, v_uv + vec2(0.0, tex_offset.y * i)).rgb * weight[i];
+            result += texture(u_input, v_uv - vec2(0.0, tex_offset.y * i)).rgb * weight[i];
+        }
+    }
+    FragColor = vec4(result, 1.0);
+}
+
+\tresholdFX.fs
+
+#version 330 core
+
+out vec4 BrightColor;
+  
+in vec2 v_uv;
+
+uniform float u_treshold_intensity;
+uniform sampler2D u_input;
+
+void main() {
+    vec4 color = texture(u_input, v_uv);
+
+    // check whether fragment output is higher than threshold, if so output as brightness color
+    float brightness = dot(color.rgb, vec3(0.2126, 0.7152, 0.0722));
+	
+    if (brightness > (u_treshold_intensity / 10))
+        BrightColor = vec4(color.rgb, 1.0);
+    else
+        BrightColor = vec4(0.0, 0.0, 0.0, 1.0);	
+}  
+
+\bloomFX.fs
+
+#version 330 core
+
+out vec4 FragColor;
+  
+in vec2 v_uv;
+
+uniform float u_bloom_intensity;
+
+uniform sampler2D u_input;
+uniform sampler2D u_input_blurred;
+
+void main() {
+    vec4 color_base = texture(u_input, v_uv);
+    vec4 color_blurred = texture(u_input_blurred, v_uv);
+
+	FragColor = color_base + color_blurred * u_bloom_intensity;
+}  
+
+\AAFX.fs
+#version 330 core
+
+out vec4 FragColor;
+
+uniform sampler2D u_input;
+
+uniform vec2 u_viewportSize;
+uniform vec2 u_iViewportSize;
+
+#define FXAA_REDUCE_MIN  (1.0/ 128.0)
+#define FXAA_REDUCE_MUL  (1.0 / 8.0)
+#define FXAA_SPAN_MAX    8.0
+
+vec4 applyFXAA(sampler2D tex, vec2 fragCoord){
+
+		vec4 color = vec4(0.0);
+		
+		// per cada pixel s'agafa es pixels des costats en forma de x 
+		// NW, NE, SW, SE, M venen de NortWest, NortEast, SouthWest, SwoutEast i middle respectivament
+		vec3 rgbNW = texture2D(tex, (fragCoord + vec2(-1.0, -1.0)) * u_iViewportSize).xyz;
+		vec3 rgbNE = texture2D(tex, (fragCoord + vec2(1.0, -1.0)) * u_iViewportSize).xyz;
+		vec3 rgbSW = texture2D(tex, (fragCoord + vec2(-1.0, 1.0)) * u_iViewportSize).xyz;
+		vec3 rgbSE = texture2D(tex, (fragCoord + vec2(1.0, 1.0)) * u_iViewportSize).xyz;
+		vec3 rgbM  = texture2D(tex, fragCoord  * u_iViewportSize).xyz;
+
+		// Aixo es per treure sa luminancia de cada pixel
+		vec3 luma = vec3(0.299, 0.587, 0.114);
+
+		// Aqui s'aplica es vector per sabra sa luminancia
+		float lumaNW = dot(rgbNW, luma);
+		float lumaNE = dot(rgbNE, luma);
+		float lumaSW = dot(rgbSW, luma);
+		float lumaSE = dot(rgbSE, luma);
+		float lumaM  = dot(rgbM,  luma);
+
+		float lumaMin = min(lumaM, min(min(lumaNW, lumaNE), min(lumaSW, lumaSE)));
+		float lumaMax = max(lumaM, max(max(lumaNW, lumaNE), max(lumaSW, lumaSE)));
+
+		vec2 dir;
+		dir.x = -((lumaNW + lumaNE) - (lumaSW + lumaSE));
+		dir.y =  ((lumaNW + lumaSW) - (lumaNE + lumaSE));
+		
+		float dirReduce = max((lumaNW + lumaNE + lumaSW + lumaSE) * (0.25 * FXAA_REDUCE_MUL), FXAA_REDUCE_MIN);
+		float rcpDirMin = 1.0 / (min(abs(dir.x), abs(dir.y)) + dirReduce);
+
+		dir = min(vec2(FXAA_SPAN_MAX, FXAA_SPAN_MAX), max(vec2(-FXAA_SPAN_MAX, -FXAA_SPAN_MAX), dir * rcpDirMin)) * u_iViewportSize;
+
+		vec3 rgbA = 0.5 * (texture2D(tex, fragCoord * u_iViewportSize + dir * (1.0 / 3.0 - 0.5)).xyz + texture2D(tex, fragCoord * u_iViewportSize + dir * (2.0 / 3.0 - 0.5)).xyz);
+		vec3 rgbB = rgbA * 0.5 + 0.25 * (texture2D(tex, fragCoord * u_iViewportSize + dir * -0.5).xyz + texture2D(tex, fragCoord * u_iViewportSize + dir * 0.5).xyz);
+
+		float lumaB = dot(rgbB, luma);
+		
+		if ((lumaB < lumaMin) || (lumaB > lumaMax))
+			color = vec4(rgbA, 1.0);
+		else
+			color = vec4(rgbB, 1.0);
+
+		return color;
+}
+
+void main(){
+	FragColor = applyFXAA(u_input, gl_FragCoord.xy);
 }

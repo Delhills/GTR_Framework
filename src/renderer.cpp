@@ -18,8 +18,8 @@ using namespace GTR;
 sProbe probe;
 
 Renderer::Renderer() {
-	int w = Application::instance->window_width;
-	int h = Application::instance->window_height;
+	w = Application::instance->window_width;
+	h = Application::instance->window_height;
 
 	average_lum = 1.0;
 	lum_white = 1.0;
@@ -53,18 +53,16 @@ void Renderer::render(GTR::Scene* scene, Camera* camera) {
 	renderSceneShadowmaps(scene);
 
 	if (show_fbo) {
-
-		if (showCameraDirectional) renderToFbo(scene, scene->lights[3]);
-		else renderToFbo(scene, scene->lights[0]);
-
+		if (showCameraDirectional) 
+			renderToFbo(scene, scene->lights[3]);
+		else 
+			renderToFbo(scene, scene->lights[0]);
 	}
 	else {
 		//renderToFbo(scene, camera, &fbo);
 		renderScene(scene, camera, pipeline_mode);
 	}
-
 }
-
 
 void Renderer::renderForward(GTR::Scene* scene, std::vector <renderCall>& rendercalls, Camera* camera) {
 
@@ -108,8 +106,7 @@ void Renderer::renderDeferred(GTR::Scene* scene, std::vector <renderCall>& rende
 	if (!ao_blur_buffer)
 		ao_blur_buffer = new Texture(w, h, GL_RED, GL_UNSIGNED_BYTE);
 
-	if (apply_ssao)
-	{
+	if (apply_ssao) {
 		ssao.apply(gbuffers_fbo.depth_texture, gbuffers_fbo.color_textures[1], camera, ao_buffer);
 		ssao.blurTexture(ao_buffer, ao_blur_buffer);
 	}
@@ -117,6 +114,23 @@ void Renderer::renderDeferred(GTR::Scene* scene, std::vector <renderCall>& rende
 	fbo.bind();	//textura final pre hdr
 	renderFinalFBO(&gbuffers_fbo, camera, scene, hdr, ao_buffer, rendercalls);
 	fbo.unbind();
+
+	if (!fx_blur_buffer)
+		fx_blur_buffer = new Texture(w, h, GL_RGBA, GL_FLOAT);
+
+	if (!fx_threshold_buffer)
+		fx_threshold_buffer = new Texture(w, h, GL_RGBA, GL_FLOAT);
+
+	if (!fx_bloom_buffer)
+		fx_bloom_buffer = new Texture(w, h, GL_RGBA, GL_FLOAT);
+
+	if (!fx_aa_buffer)
+		fx_aa_buffer = new Texture(w, h, GL_RGBA, GL_FLOAT);
+
+	fx.aa(fbo.color_textures[0], fx_aa_buffer);
+	fx.treshold(fx_aa_buffer, fx_threshold_buffer);
+	fx.blur(fx_threshold_buffer, fx_blur_buffer);
+	fx.bloom(fx_aa_buffer, fx_blur_buffer, fx_bloom_buffer);
 
 	Shader* final_shader = Shader::Get("tonemapper"); //este aplica tonemapper
 
@@ -126,7 +140,7 @@ void Renderer::renderDeferred(GTR::Scene* scene, std::vector <renderCall>& rende
 	final_shader->setUniform("u_scale", scale_tm);
 
 	if (hdr)
-		fbo.color_textures[0]->toViewport(final_shader);
+		fx_bloom_buffer->toViewport(final_shader);
 	else
 		fbo.color_textures[0]->toViewport();
 
@@ -148,10 +162,6 @@ void Renderer::renderDeferred(GTR::Scene* scene, std::vector <renderCall>& rende
 		depthShader->disable();
 
 		glViewport(0, 0, w, h);
-	}
-
-	else if (irr_fbo && show_irr_fbo) {
-		irr_fbo->color_textures[0]->toViewport();
 	}
 }
 
@@ -208,17 +218,10 @@ void Renderer::renderFinalFBO(FBO* gbuffers_fbo, Camera* camera, GTR::Scene* sce
 
 	int numProbes = probes.size();
 	//now compute the coeffs for every probe
-	for (int iP = 0; iP < numProbes; ++iP)
-	{
+	for (int iP = 0; iP < numProbes; ++iP) {
 		int probe_index = iP;
 		renderProbe(probes[iP].pos, 3.0, probes[iP].sh.coeffs[0].v);
 	}
-
-	if (irr_fbo && show_irr_fbo) {
-		irr_fbo->color_textures[0]->toViewport();
-	}
-
-
 }
 
 void Renderer::view_gbuffers(FBO* gbuffers_fbo, float w, float h, Camera* camera) {
@@ -245,8 +248,10 @@ void Renderer::view_gbuffers(FBO* gbuffers_fbo, float w, float h, Camera* camera
 void Renderer::setUniformsLight(LightEntity* light, Camera* camera, GTR::Scene* scene, Texture* ao_buffer, Shader* shader, bool hdr, FBO* gbuffers_fbo, bool first_iter) {
 
 	shader->setUniform("u_viewprojection", camera->viewprojection_matrix);
+
 	Matrix44 inv_vp = camera->viewprojection_matrix;
 	inv_vp.inverse();
+
 	shader->setUniform("hdr", hdr);
 
 	shader->setUniform("u_camera_position", camera->eye);
@@ -257,13 +262,11 @@ void Renderer::setUniformsLight(LightEntity* light, Camera* camera, GTR::Scene* 
 	shader->setTexture("u_normal_texture", gbuffers_fbo->color_textures[1], 1);
 	shader->setTexture("u_extra_texture", gbuffers_fbo->color_textures[2], 2);
 	shader->setTexture("u_depth_texture", gbuffers_fbo->depth_texture, 3);
+
 	if (first_iter)
-	{
 		shader->setUniform("u_ambient_light", scene->ambient_light);
-	}
-	else {
+	else 
 		shader->setUniform("u_ambient_light", Vector3());
-	}
 
 	shader->setUniform("u_first_iter", first_iter);
 
@@ -271,10 +274,10 @@ void Renderer::setUniformsLight(LightEntity* light, Camera* camera, GTR::Scene* 
 		light->setLightUniforms(shader, false);
 	else
 		light->setLightUniforms(shader, true);
+
 	if (apply_ssao)
-	{
 		shader->setTexture("u_ao_texture", ao_buffer, 5);
-	}
+
 	shader->setUniform("u_apply_ssao", apply_ssao);
 }
 
@@ -699,6 +702,8 @@ void GTR::Renderer::renderInMenu() {
 			ImGui::SliderFloat("Scale tonemap", &scale_tm, 0.001, 2.0);
 		}
 		ImGui::Combo("Blend", (int*)&blend_mode, "DITHERING\0FORWARD", 2);
+		ImGui::SliderFloat("Treshold intensity", &fx.treshold_intensity, 0, 10);
+		ImGui::SliderFloat("Bloom intensity", &fx.bloom_intensity, 0, 10);
 	}
 }
 
@@ -730,7 +735,7 @@ void GTR::Renderer::defineAndPosGridProbe(GTR::Scene* scene)
 	Vector3 end_pos(530, 433, 460);
 
 	//define how many probes you want per dimension -230, 36, -342 //500 433 460
-	Vector3 dim(8, 6, 12);
+	Vector3 dim(0, 0, 0);
 
 	//compute the vector from one corner to the other
 	Vector3 delta = (end_pos - start_pos);
@@ -761,8 +766,6 @@ void GTR::Renderer::defineAndPosGridProbe(GTR::Scene* scene)
 			}
 
 	updateIrradianceCache(scene, dim);
-
-
 }
 
 
@@ -846,27 +849,27 @@ void GTR::Renderer::updateIrradianceCache(GTR::Scene* scene, Vector3 dim) {
 
 	//here we fill the data of the array with our probes in x,y,z order...
 
-	for (int x = 0; x < dim.x; x++)
-	{
-		for (int y = 0; y < dim.y; y++)
-		{
-			for (int z = 0; z < dim.z; z++)
-			{
+	//for (int x = 0; x < dim.x; x++)
+	//{
+	//	for (int y = 0; y < dim.y; y++)
+	//	{
+	//		for (int z = 0; z < dim.z; z++)
+	//		{
 
-			}
-		}
-	}
+	//		}
+	//	}
+	//}
 
-	//now upload the data to the GPU
-	probes_texture->upload( GL_RGB, GL_FLOAT, false, (uint8*)sh_data);
+	////now upload the data to the GPU
+	//probes_texture->upload( GL_RGB, GL_FLOAT, false, (uint8*)sh_data);
 
-	//disable any texture filtering when reading
-	probes_texture->bind();
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	////disable any texture filtering when reading
+	//probes_texture->bind();
+	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
-	//always free memory after allocating it!!!
-	delete[] sh_data;
+	////always free memory after allocating it!!!
+	//delete[] sh_data;
 
 
 	//extractProbe(scene, probe);
@@ -897,4 +900,71 @@ Texture* GTR::CubemapFromHDRE(const char* filename)
 					(Uint8**)hdre->getFacesh(i), GL_RGBA16F, i);
 		}
 	return texture;
+}
+
+GTR::FX::FX() {
+	treshold_intensity = 1.0f;
+	bloom_intensity = 1.0f;
+
+	w = Application::instance->window_width;;
+	h = Application::instance->window_height;;
+}
+
+void GTR::FX::blur(Texture* input, Texture* output) {
+	setFX(BLUR, input, output);
+}
+
+void GTR::FX::treshold(Texture* input, Texture* output) {
+	setFX(TRESHOLD, input, output);
+}
+
+void GTR::FX::bloom(Texture* input_base, Texture* input_blurred, Texture* output) {
+	setFX(BLOOM, input_base, output, input_blurred);
+}
+
+void GTR::FX::aa(Texture* input, Texture* output) {
+	setFX(AA, input, output);
+}
+
+void GTR::FX::setFX(eFxMode fx, Texture* input, Texture* output, Texture* second_input)
+{
+	FBO* fbo = Texture::getGlobalFBO(output);
+	fbo->bind();
+
+		Mesh* quad = Mesh::getQuad();
+		Shader* sh;
+		switch (fx) {
+			case AA: sh = Shader::Get("AAFX"); break;
+			case TRESHOLD: sh = Shader::Get("tresholdFX"); break;
+			case BLUR: sh = Shader::Get("blurFX"); break;
+			case BLOOM: sh = Shader::Get("bloomFX"); break;
+		}
+
+		glDisable(GL_DEPTH_TEST);
+		glDisable(GL_BLEND);
+
+		sh->enable();
+
+			sh->setTexture("u_input", input, 9);
+
+			switch (fx) {
+				case AA: 
+					sh->setUniform("u_iViewportSize", Vector2(1.0 / (float)w, 1.0 / (float)h));
+					sh->setUniform("u_viewportSize", Vector2((float)w, (float)h));
+					break;
+				case TRESHOLD:
+					sh->setUniform("u_treshold_intensity", treshold_intensity);
+					break;
+				case BLOOM: 
+					sh->setTexture("u_input_blurred", second_input, 10);
+					sh->setUniform("u_bloom_intensity", bloom_intensity);
+					break;
+			}
+
+			quad->render(GL_TRIANGLES);
+
+		sh->disable();
+
+	fbo->unbind();
+
 }

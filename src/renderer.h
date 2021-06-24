@@ -24,6 +24,12 @@ namespace GTR {
 		DEFERRED
 	};
 
+	enum eFxMode {
+		AA,
+		BLUR,
+		TRESHOLD,
+		BLOOM
+	};
 
 	enum eBlendMode {
 		DITHERING,
@@ -53,6 +59,24 @@ namespace GTR {
 		void apply(Texture* depth_buffer, Texture* normal_buffer, Camera* cam, Texture* output);
 	};
 
+	class FX {
+	public:
+
+		int w;
+		int h;
+
+		float treshold_intensity;
+		float bloom_intensity;
+
+		FX();
+
+		void treshold(Texture* input, Texture* output);
+		void blur(Texture* input, Texture* output);
+		void bloom(Texture* input_base, Texture* input_blurred, Texture* output);
+		void aa(Texture* input, Texture* output);
+		void setFX(eFxMode fx, Texture* input, Texture* output, Texture* second_input = NULL);
+	};
+
 	//struct to store probes
 	struct sProbe {
 		Vector3 pos; //where is located
@@ -70,11 +94,12 @@ namespace GTR {
 
 	public:
 
+		int w;
+		int h;
 		//add here your functions
 		//...
 		FBO fbo;
 		FBO gbuffers_fbo;
-		FBO final_fbo;
 		FBO* irr_fbo;
 
 		bool rendering_shadowmap;
@@ -113,7 +138,16 @@ namespace GTR {
 		Texture* ao_blur_buffer = NULL;
 		Texture* probes_texture = NULL;
 
+		Texture* fx_blur_buffer = NULL;
+		Texture* fx_threshold_buffer = NULL;
+		Texture* fx_bloom_buffer = NULL;
+		Texture* fx_aa_buffer = NULL;
+
 		SSAOFX ssao;
+
+		FX fx;
+
+		Matrix44 previous_vp;
 
 		std::vector<sProbe> probes;
 
@@ -123,6 +157,8 @@ namespace GTR {
 		//renders several elements of the scene
 
 		void render(GTR::Scene* scene, Camera* camera);
+
+		void renderFinalFBO(GTR::Scene* scene, Camera* camera);
 
 		void collectRenderCalls(GTR::Scene* scene, Camera* camera);
 
