@@ -87,18 +87,30 @@ void Renderer::renderDeferred(GTR::Scene* scene, std::vector <renderCall>& rende
 
 
 	if (gbuffers_fbo.fbo_id == 0) {
-		gbuffers_fbo.create(w,
-							h,
-							3,
-							GL_RGBA,
-							GL_UNSIGNED_BYTE);
+		gbuffers_fbo.create(w, h, 3, GL_RGBA,GL_UNSIGNED_BYTE);
+		decals_fbo.create(w, h, 3, GL_RGBA, GL_UNSIGNED_BYTE);
 	}
 
 	gbuffers_fbo.bind();
 
-	renderGBuffers(scene, rendercalls, camera);
+		renderGBuffers(scene, rendercalls, camera);
 
 	gbuffers_fbo.unbind();
+
+	gbuffers_fbo.color_textures[0]->copyTo(decals_fbo.color_textures[0]);
+	gbuffers_fbo.color_textures[1]->copyTo(decals_fbo.color_textures[1]);
+	gbuffers_fbo.color_textures[2]->copyTo(decals_fbo.color_textures[2]);
+
+	decals_fbo.bind();
+
+		gbuffers_fbo.depth_texture->copyTo(NULL);
+		renderDecalls(scene, camera);
+
+	decals_fbo.unbind();
+
+	decals_fbo.color_textures[0]->copyTo(gbuffers_fbo.color_textures[0]);
+	decals_fbo.color_textures[1]->copyTo(gbuffers_fbo.color_textures[1]);
+	decals_fbo.color_textures[2]->copyTo(gbuffers_fbo.color_textures[2]);
 
 	if (!ao_buffer)
 		ao_buffer = new Texture(w, h, GL_RED, GL_UNSIGNED_BYTE);
@@ -127,10 +139,24 @@ void Renderer::renderDeferred(GTR::Scene* scene, std::vector <renderCall>& rende
 	if (!fx_aa_buffer)
 		fx_aa_buffer = new Texture(w, h, GL_RGBA, GL_FLOAT);
 
+	if (!fx_dof_buffer)
+		fx_dof_buffer = new Texture(w, h, GL_RGBA, GL_FLOAT);
+
+	if (!fx_dof_blurred_buffer)
+		fx_dof_blurred_buffer = new Texture(w, h, GL_RGBA, GL_FLOAT);
+
+	// Aplicam AA
 	fx.aa(fbo.color_textures[0], fx_aa_buffer);
+
+	// Bloom
 	fx.treshold(fx_aa_buffer, fx_threshold_buffer);
 	fx.blur(fx_threshold_buffer, fx_blur_buffer);
 	fx.bloom(fx_aa_buffer, fx_blur_buffer, fx_bloom_buffer);
+
+	// Aplicam DoF
+	fx.blur(fx_bloom_buffer, fx_dof_blurred_buffer);
+	fx.blur(fx_dof_blurred_buffer, fx_aa_buffer);
+	fx.dof(fx_bloom_buffer, fx_aa_buffer, fbo.depth_texture, camera, fx_dof_buffer);
 
 	Shader* final_shader = Shader::Get("tonemapper"); //este aplica tonemapper
 
@@ -140,16 +166,17 @@ void Renderer::renderDeferred(GTR::Scene* scene, std::vector <renderCall>& rende
 	final_shader->setUniform("u_scale", scale_tm);
 
 	if (hdr)
-		fx_bloom_buffer->toViewport(final_shader);
+		fx_dof_buffer->toViewport(final_shader);
+		//fx_bloom_buffer->toViewport(final_shader);
 	else
-		fbo.color_textures[0]->toViewport();
+		decals_fbo.color_textures[0]->toViewport();
 
 	glDisable(GL_BLEND);
 
 	final_shader->disable();
 
 	if (show_gbuffers)
-		view_gbuffers(&gbuffers_fbo, w, h, camera);
+		view_gbuffers(camera);
 	else if (show_ao_buffer)
 		ao_blur_buffer->toViewport();
 	else if (show_depthfbo) {
@@ -163,6 +190,7 @@ void Renderer::renderDeferred(GTR::Scene* scene, std::vector <renderCall>& rende
 
 		glViewport(0, 0, w, h);
 	}
+
 }
 
 void Renderer::renderFinalFBO(FBO* gbuffers_fbo, Camera* camera, GTR::Scene* scene, bool hdr, Texture* ao_buffer, std::vector <renderCall>& rendercalls) {
@@ -216,6 +244,8 @@ void Renderer::renderFinalFBO(FBO* gbuffers_fbo, Camera* camera, GTR::Scene* sce
 	glDisable(GL_BLEND);
 	glDisable(GL_DEPTH_TEST);
 
+	computeVolumetric(camera, gbuffers_fbo->depth_texture, scene);
+
 	int numProbes = probes.size();
 	//now compute the coeffs for every probe
 	for (int iP = 0; iP < numProbes; ++iP) {
@@ -224,14 +254,17 @@ void Renderer::renderFinalFBO(FBO* gbuffers_fbo, Camera* camera, GTR::Scene* sce
 	}
 }
 
-void Renderer::view_gbuffers(FBO* gbuffers_fbo, float w, float h, Camera* camera) {
+void Renderer::view_gbuffers(Camera* camera) {
+
+	//FBO* fbo = &gbuffers_fbo;
+	FBO* fbo = &decals_fbo;
 
 	glViewport(0, h * 0.5, w * 0.5, h * 0.5);
-	gbuffers_fbo->color_textures[0]->toViewport();
+	fbo->color_textures[0]->toViewport();
 	glViewport(w * 0.5, h * 0.5, w * 0.5, h * 0.5);
-	gbuffers_fbo->color_textures[1]->toViewport();
+	fbo->color_textures[1]->toViewport();
 	glViewport(0, 0, w * 0.5, h * 0.5);
-	gbuffers_fbo->color_textures[2]->toViewport();
+	fbo->color_textures[2]->toViewport();
 	glViewport(w * 0.5, 0, w * 0.5, h * 0.5);
 
 	Shader* depthShader = Shader::Get("depth");
@@ -239,10 +272,37 @@ void Renderer::view_gbuffers(FBO* gbuffers_fbo, float w, float h, Camera* camera
 	depthShader->enable();
 	depthShader->setUniform("u_camera_nearfar", Vector2(camera->near_plane, camera->far_plane));
 
-	gbuffers_fbo->depth_texture->toViewport(depthShader);
+	fbo->depth_texture->toViewport(depthShader);
 	depthShader->disable();
 
 	glViewport(0, 0, w, h);
+}
+
+void Renderer::computeVolumetric(Camera* camera, Texture* depth_texture, Scene* scene) {
+	// Volumetric rendering
+
+	Mesh* quad_volum = Mesh::getQuad();
+	Shader* sh = Shader::Get("volume_direct");
+	sh->enable();
+
+	Matrix44 inv_vp = camera->viewprojection_matrix;
+	inv_vp.inverse();
+
+	sh->setUniform("u_inverse_viewprojection", inv_vp);
+	sh->setTexture("u_depth_texture", depth_texture, 3);
+	sh->setUniform("u_camera_pos", camera->eye);
+
+	LightEntity* light = scene->lights[3];
+	light->setLightUniforms(sh, true);
+
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+	glDisable(GL_DEPTH_TEST);
+
+	quad_volum->render(GL_TRIANGLES);
+	glDisable(GL_BLEND);
+
+	sh->disable();
 }
 
 void Renderer::setUniformsLight(LightEntity* light, Camera* camera, GTR::Scene* scene, Texture* ao_buffer, Shader* shader, bool hdr, FBO* gbuffers_fbo, bool first_iter) {
@@ -477,7 +537,10 @@ void Renderer::renderMeshWithMaterial(eRenderMode mode, GTR::Scene* scene, const
 	shader->setUniform("u_color", material->color);
 	shader->setUniform("u_emissive_factor", material->emissive_factor);
 
-	shader->setUniform("u_ambient_light", scene->ambient_light);
+	if (blend_mode != FORWARD_BLEND)
+		shader->setUniform("u_ambient_light", scene->ambient_light);
+	else
+		shader->setUniform("u_ambient_light", Vector3(0.0, 0.0, 0.0));
 
 	std::vector<GTR::LightEntity*> lightsScene = scene->lights;
 
@@ -609,6 +672,55 @@ void Renderer::renderSceneShadowmaps(GTR::Scene* scene)
 	rendering_shadowmap = false;
 }
 
+void Renderer::renderDecalls(GTR::Scene* scene, Camera* camera) { 
+
+	static Mesh* mesh = NULL;
+
+	if (mesh == NULL) {
+		mesh = new Mesh();
+		mesh->createCube();
+	}
+
+	Shader* shader = Shader::Get("decalls");
+
+	shader->enable();
+
+	Matrix44 inv_vp = camera->viewprojection_matrix;
+	inv_vp.inverse();
+	shader->setUniform("u_inverse_viewprojection", inv_vp);
+	shader->setUniform("u_viewprojection", camera->viewprojection_matrix);
+
+	shader->setUniform("u_camera_pos", camera->eye);
+	shader->setUniform("u_iRes", Vector2(1.0 / (float)gbuffers_fbo.depth_texture->width, 1.0 / (float)gbuffers_fbo.depth_texture->height));
+
+	shader->setTexture("u_color_texture", gbuffers_fbo.color_textures[0], 0);
+	shader->setTexture("u_normal_texture", gbuffers_fbo.color_textures[1], 1);
+	shader->setTexture("u_extra_texture", gbuffers_fbo.color_textures[2], 2);
+	shader->setTexture("u_depth_texture", gbuffers_fbo.depth_texture, 3);
+
+	glDisable(GL_DEPTH_TEST);
+	glDisable(GL_BLEND);
+
+	for (int i = 0; i < scene->entities.size(); ++i) {
+		BaseEntity* ent = scene->entities[i];
+		if (ent->entity_type != eEntityType::DECAL)
+			continue;
+		
+		DecalEntity* dent = (DecalEntity*) ent;
+
+		shader->setUniform("u_model", ent->model);
+
+		Matrix44 inv_model = ent->model;
+		inv_model.inverse();
+		shader->setUniform("u_iModel", inv_model);
+		shader->setTexture("u_decal_texture", dent->albedo, 4);
+
+		mesh->render(GL_TRIANGLES);
+	}
+
+	shader->disable();
+}
+
 GTR::SSAOFX::SSAOFX() {
 	points = generateSpherePoints(64, 10.0, true);
 	intensity = 1.0f;
@@ -704,6 +816,9 @@ void GTR::Renderer::renderInMenu() {
 		ImGui::Combo("Blend", (int*)&blend_mode, "DITHERING\0FORWARD", 2);
 		ImGui::SliderFloat("Treshold intensity", &fx.treshold_intensity, 0, 10);
 		ImGui::SliderFloat("Bloom intensity", &fx.bloom_intensity, 0, 10);
+		ImGui::SliderFloat("focal intesity", &fx.focal_intensity, 0, 1000);
+		ImGui::SliderFloat("min distance", &fx.min_distance, 0, 1000);
+		ImGui::SliderFloat("max distance", &fx.max_distance, 0, 1000);
 	}
 }
 
@@ -905,6 +1020,10 @@ Texture* GTR::CubemapFromHDRE(const char* filename)
 GTR::FX::FX() {
 	treshold_intensity = 1.0f;
 	bloom_intensity = 1.0f;
+	focal_intensity = 1.0f;
+
+	float min_distance = 8;
+	float max_distance = 12;
 
 	w = Application::instance->window_width;;
 	h = Application::instance->window_height;;
@@ -926,7 +1045,11 @@ void GTR::FX::aa(Texture* input, Texture* output) {
 	setFX(AA, input, output);
 }
 
-void GTR::FX::setFX(eFxMode fx, Texture* input, Texture* output, Texture* second_input)
+void GTR::FX::dof(Texture* input, Texture* input_blurred, Texture* depth_buffer, Camera* camera, Texture* output) {
+	setFX(DOF, input, output, input_blurred, depth_buffer, camera);
+}
+
+void GTR::FX::setFX(eFxMode fx, Texture* input, Texture* output, Texture* second_input, Texture* depth_buffer, Camera* camera)
 {
 	FBO* fbo = Texture::getGlobalFBO(output);
 	fbo->bind();
@@ -938,6 +1061,7 @@ void GTR::FX::setFX(eFxMode fx, Texture* input, Texture* output, Texture* second
 			case TRESHOLD: sh = Shader::Get("tresholdFX"); break;
 			case BLUR: sh = Shader::Get("blurFX"); break;
 			case BLOOM: sh = Shader::Get("bloomFX"); break;
+			case DOF: sh = Shader::Get("DOFFX"); break;
 		}
 
 		glDisable(GL_DEPTH_TEST);
@@ -959,6 +1083,19 @@ void GTR::FX::setFX(eFxMode fx, Texture* input, Texture* output, Texture* second
 					sh->setTexture("u_input_blurred", second_input, 10);
 					sh->setUniform("u_bloom_intensity", bloom_intensity);
 					break;
+				case DOF:
+					sh->setTexture("u_input_blurred", second_input, 10);
+					sh->setTexture("u_depth_buffer", depth_buffer, 11);
+
+					Matrix44 inv_vp = camera->viewprojection_matrix;
+					inv_vp.inverse();
+					sh->setUniform("u_inverse_viewprojection", inv_vp);
+					sh->setUniform("u_camera_pos", camera->eye);
+
+					sh->setUniform("u_iRes", Vector2(1.0 / (float)w, 1.0 / (float)h));
+
+					sh->setUniform("u_min_distance", min_distance);
+					sh->setUniform("u_max_distance", max_distance);
 			}
 
 			quad->render(GL_TRIANGLES);

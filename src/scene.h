@@ -13,15 +13,13 @@ class cJSON;
 //our namespace
 namespace GTR {
 
-
-
 	enum eEntityType {
 		NONE = 0,
 		PREFAB = 1,
 		LIGHT = 2,
 		CAMERA = 3,
 		REFLECTION_PROBE = 4,
-		DECALL = 5
+		DECAL = 5
 	};
 
 	enum eLightType {
@@ -83,6 +81,14 @@ namespace GTR {
 		virtual void renderInMenu();
 		void setLightUniforms(Shader* shader, bool useshadowmap);
 
+	};
+
+	class DecalEntity : public GTR::BaseEntity {
+	public:
+		Texture* albedo;
+
+		DecalEntity();
+		virtual void configure(GTR::Scene* scene, cJSON* json);
 	};
 
 

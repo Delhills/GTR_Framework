@@ -122,6 +122,8 @@ GTR::BaseEntity* GTR::Scene::createEntity(std::string type)
 		return new GTR::PrefabEntity();
 	if (type == "LIGHT")
 		return new GTR::LightEntity();
+	if (type == "DECAL")
+		return new GTR::DecalEntity();
 	return NULL;
 }
 
@@ -134,9 +136,6 @@ void GTR::BaseEntity::renderInMenu()
 	ImGuiMatrix44(model, "Model");
 #endif
 }
-
-
-
 
 GTR::PrefabEntity::PrefabEntity()
 {
@@ -253,7 +252,7 @@ void GTR::LightEntity::setLightUniforms(Shader* shader, bool useshadowmap)
 		Texture* shadowmap = fbo->depth_texture;
 		if (cast_shadows)
 		{
-			shader->setTexture("u_shadowmap", shadowmap, 4);
+			shader->setTexture("u_shadowmap", shadowmap, 20);
 			shader->setUniform("u_shadow_viewproj", camera.viewprojection_matrix);
 			shader->setUniform("u_shadow_bias", clamp(shadow_bias, 0.015, 1.0));
 		}
@@ -269,4 +268,18 @@ void GTR::LightEntity::setLightUniforms(Shader* shader, bool useshadowmap)
 	shader->setUniform("u_light_max_dists", max_distance);
 	shader->setUniform("u_light_coscutoff", (float)cos((cone_angle / 180.0) * PI));
 	shader->setUniform("u_light_spotexp", spot_exponent);
+}
+
+GTR::DecalEntity::DecalEntity()
+{
+	albedo = NULL;
+	entity_type = DECAL;
+}
+
+void GTR::DecalEntity::configure(GTR::Scene* scene, cJSON* json)
+{
+	std::string filename = readJSONString(json, "albedo", "");
+	if (filename.size())
+		albedo = Texture::Get((std::string("data/decalls/") +  filename).c_str());
+	std::cout << std::string("data/decalls/") + filename << std::endl;
 }

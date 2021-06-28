@@ -56,6 +56,14 @@
 			"scale":[0.8,0.8,0.8]
 		},
 		{
+			"name":"decalium",
+			"type":"DECAL",
+			"albedo":"celeste.png",
+			"position":[0,0,62.431],
+			"angle":85,
+			"scale":[53.256,5,74.505]
+		},
+		{
 			"name":"spot",
 			"type":"LIGHT",
 			"position":[0,36,-16],
