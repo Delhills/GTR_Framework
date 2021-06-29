@@ -7,8 +7,6 @@
 
 #include <vector>
 #include <cmath>
-#include <string>
-#include <iostream>
 
 #ifndef PI
 	#define PI 3.14159265359
@@ -111,7 +109,7 @@ public:
 	void random(Vector3 range);
 
 	float distance(const Vector3& v) const;
-	void debugVector() { std::cout << "[" << x << ", " << y << ", " << z << "]" << std::endl; }
+	
 
 	Vector3 cross( const Vector3& v ) const;
 	float dot( const Vector3& v ) const;
@@ -229,8 +227,6 @@ class Matrix44
 		Vector3 rightVector() { return Vector3(m[0],m[1],m[2]); }
 		Vector3 topVector() { return Vector3(m[4],m[5],m[6]); }
 		Vector3 frontVector() { return Vector3(m[8],m[9],m[10]); }
-
-
 
 		bool inverse();
 		void setUpAndOrthonormalize(Vector3 up);

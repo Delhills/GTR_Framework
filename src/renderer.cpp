@@ -31,20 +31,23 @@ Renderer::Renderer() {
 
 	fbo.create(w, h, 1, GL_RGBA, GL_FLOAT, true);
 
-	memset(&probe, 0, sizeof(probe));
-	probe.pos.set(76, 38, 96);
-	probe.sh.coeffs[0].set(1, 0, 0);
-	probe.sh.coeffs[1].set(0, 1, 0);
+	//memset(&probe, 0, sizeof(probe));
+	//probe.pos.set(76, 38, 96);
+	//probe.sh.coeffs[0].set(1, 0, 0);
+	//probe.sh.coeffs[1].set(0, 1, 0);
 
-	irr_fbo = NULL;
+	if (apply_irr)
+	{
+		irr_fbo = NULL;
 
-	defineAndPosGridProbe(GTR::Scene::instance);
+		irr_start_pos = Vector3(-230, 36, -342);
+		irr_end_pos = Vector3(530, 433, 460);
+		irr_dim = Vector3(8, 6, 12);
+		irr_delta = (irr_end_pos - irr_start_pos);
+		irr_normal_dist = 1.0;
 
-	probes_texture = new Texture(
-		9, //9 coefficients per probe
-		probes.size(), //as many rows as probes
-		GL_RGB, //3 channels per coefficient
-		GL_FLOAT); //they require a high range
+		defineAndPosGridProbe(GTR::Scene::instance);
+	}
 }
 
 
@@ -183,6 +186,17 @@ void Renderer::renderFinalFBO(FBO* gbuffers_fbo, Camera* camera, GTR::Scene* sce
 
 		setUniformsLight(light, camera, scene, ao_buffer, shader, hdr, gbuffers_fbo, first_iter);
 
+		shader->setUniform("u_apply_irr", apply_irr);
+		shader->setUniform("u_tri_irr", apply_tri_irr);
+		shader->setUniform("u_num_probes", (float)probes.size());
+		shader->setUniform("u_irr_start", irr_start_pos);
+		shader->setUniform("u_irr_end", irr_end_pos);
+		shader->setUniform("u_irr_dims", irr_dim);
+		shader->setUniform("u_irr_delta", irr_delta);
+		shader->setUniform("u_irr_normal_dist", irr_normal_dist);
+		shader->setUniform("u_probes_texture", probes_texture, 6);
+
+
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_ONE, GL_ONE);
 
@@ -205,7 +219,7 @@ void Renderer::renderFinalFBO(FBO* gbuffers_fbo, Camera* camera, GTR::Scene* sce
 
 	glDisable(GL_BLEND);
 	glDisable(GL_DEPTH_TEST);
-
+	 
 	int numProbes = probes.size();
 	//now compute the coeffs for every probe
 	for (int iP = 0; iP < numProbes; ++iP)
@@ -217,7 +231,9 @@ void Renderer::renderFinalFBO(FBO* gbuffers_fbo, Camera* camera, GTR::Scene* sce
 	if (irr_fbo && show_irr_fbo) {
 		irr_fbo->color_textures[0]->toViewport();
 	}
-
+	if (show_probes_text && probes_texture) {
+		probes_texture->toViewport();
+	}
 
 }
 
@@ -240,6 +256,10 @@ void Renderer::view_gbuffers(FBO* gbuffers_fbo, float w, float h, Camera* camera
 	depthShader->disable();
 
 	glViewport(0, 0, w, h);
+}
+
+void GTR::Renderer::createIrradianceMap()
+{
 }
 
 void Renderer::setUniformsLight(LightEntity* light, Camera* camera, GTR::Scene* scene, Texture* ao_buffer, Shader* shader, bool hdr, FBO* gbuffers_fbo, bool first_iter) {
@@ -693,6 +713,12 @@ void GTR::Renderer::renderInMenu() {
 		ImGui::Checkbox("Show SSAO", &show_ao_buffer);
 		ImGui::Checkbox("Show depth fbo", &show_depthfbo);
 		ImGui::Checkbox("Apply tonemap", &hdr);
+		ImGui::Checkbox("Apply irr", &apply_irr);
+		if (apply_irr)
+		{
+			ImGui::Checkbox("Apply trilinear interpolation irr", &apply_tri_irr);
+		}
+		ImGui::Checkbox("Show probes_text", &show_probes_text);
 		if (hdr) {
 			ImGui::SliderFloat("Average luminance", &average_lum, 0.0, 2.0);
 			ImGui::SliderFloat("White luminance", &lum_white, 0.0, 2.0);
@@ -726,43 +752,46 @@ void GTR::Renderer::defineAndPosGridProbe(GTR::Scene* scene)
 
 	//define the corners of the axis aligned grid
 	//this can be done using the boundings of our scene
-	Vector3 start_pos(-230, 36, -342);
-	Vector3 end_pos(530, 433, 460);
 
 	//define how many probes you want per dimension -230, 36, -342 //500 433 460
-	Vector3 dim(8, 6, 12);
 
 	//compute the vector from one corner to the other
-	Vector3 delta = (end_pos - start_pos);
 
 	//and scale it down according to the subdivisions
 	//we substract one to be sure the last probe is at end pos
-	delta.x /= (dim.x - 1);
-	delta.y /= (dim.y - 1);
-	delta.z /= (dim.z - 1);
+	irr_delta.x /= (irr_dim.x - 1);
+	irr_delta.y /= (irr_dim.y - 1);
+	irr_delta.z /= (irr_dim.z - 1);
 
 	//now delta give us the distance between probes in every axis
 
 	//lets compute the centers
 	//pay attention at the order at which we add them
-	for (int z = 0; z < dim.z; ++z)
-		for (int y = 0; y < dim.y; ++y)
-			for (int x = 0; x < dim.x; ++x)
+	for (int z = 0; z < irr_dim.z; ++z)
+		for (int y = 0; y < irr_dim.y; ++y)
+			for (int x = 0; x < irr_dim.x; ++x)
 			{
 				sProbe p;
 				p.local.set(x, y, z);
 
 				//index in the linear array
-				p.index = x + y * dim.x + z * dim.x * dim.y;
+				p.index = x + y * irr_dim.x + z * irr_dim.x * irr_dim.y;
 
 				//and its position
-				p.pos = start_pos + delta * Vector3(x, y, z);
+				p.pos = irr_start_pos + irr_delta * Vector3(x, y, z);
 				probes.push_back(p);
 			}
 
-	updateIrradianceCache(scene, dim);
-
-
+	if (!probes_texture)
+	{
+		int numProb = probes.size();
+		probes_texture = new Texture(
+			9, //9 coefficients per probe
+			numProb, //as many rows as probes
+			GL_RGB, //3 channels per coefficient
+			GL_FLOAT); //they require a high range
+		updateIrradianceCache(scene);
+	}
 }
 
 
@@ -829,46 +858,32 @@ void Renderer::extractProbe(GTR::Scene* scene, sProbe& p) {
 	p.sh = computeSH(images, 1.0);
 }
 
-void GTR::Renderer::updateIrradianceCache(GTR::Scene* scene, Vector3 dim) {
+void GTR::Renderer::updateIrradianceCache(GTR::Scene* scene) {
 
 	//we must create the color information for the texture. because every SH are 27 floats in the RGB,RGB,... order, we can create an array of SphericalHarmonics and use it as pixels of the texture
 	SphericalHarmonics* sh_data = NULL;
-	sh_data = new SphericalHarmonics[ dim.x * dim.y * dim.z ];
+	sh_data = new SphericalHarmonics[ irr_dim.x * irr_dim.y * irr_dim.z ];
 
 	int numProbes = probes.size();
 	//now compute the coeffs for every probe
 	for (int iP = 0; iP < numProbes; ++iP)
 	{
-		int probe_index = iP;
 		extractProbe(scene, probes[iP]);
+		sh_data[iP] = probes[iP].sh;
 	}
 
 
 	//here we fill the data of the array with our probes in x,y,z order...
-
-	for (int x = 0; x < dim.x; x++)
-	{
-		for (int y = 0; y < dim.y; y++)
-		{
-			for (int z = 0; z < dim.z; z++)
-			{
-
-			}
-		}
-	}
-
 	//now upload the data to the GPU
 	probes_texture->upload( GL_RGB, GL_FLOAT, false, (uint8*)sh_data);
 
-	//disable any texture filtering when reading
-	probes_texture->bind(0);
+	////disable any texture filtering when reading
+	probes_texture->bind();
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
-	//always free memory after allocating it!!!
+	////always free memory after allocating it!!!
 	delete[] sh_data;
-
-
 	//extractProbe(scene, probe);
 }
 

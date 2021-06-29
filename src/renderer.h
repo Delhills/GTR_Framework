@@ -104,6 +104,9 @@ namespace GTR {
 		bool show_depthfbo = false;
 		bool apply_ssao = true;
 		bool show_irr_fbo = false;
+		bool apply_irr = true;
+		bool apply_tri_irr = false;
+		bool show_probes_text = false;
 
 		float average_lum;
 		float lum_white;
@@ -116,6 +119,12 @@ namespace GTR {
 		SSAOFX ssao;
 
 		std::vector<sProbe> probes;
+
+		Vector3 irr_start_pos;
+		Vector3 irr_end_pos;
+		Vector3 irr_dim;
+		Vector3 irr_delta;
+		float irr_normal_dist;
 
 		Renderer();
 
@@ -156,8 +165,9 @@ namespace GTR {
 		void renderProbe(Vector3 pos, float size, float* coeffs);
 		void extractProbe(GTR::Scene* scene, sProbe& p);
 
-		void updateIrradianceCache(GTR::Scene* scene, Vector3 dim);
+		void updateIrradianceCache(GTR::Scene* scene);
 
+		void createIrradianceMap();
 
 		void view_gbuffers(FBO* gbuffers_fbo, float w, float h, Camera* camera);
 		void renderFinalFBO(FBO* gbuffers_fbo, Camera* camera, GTR::Scene* scene, bool hdr, Texture* ao_buffer, std::vector <renderCall>& rendercalls);
