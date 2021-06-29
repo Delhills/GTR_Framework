@@ -16,6 +16,16 @@ tonemapper quad.vs tonemapper.fs
 deferred_sphere basic.vs deferred.fs
 ssao quad.vs ssao.fs
 blur quad.vs blur.fs
+decalls basic.vs decalls.fs
+// FX
+blurFX quad.vs blurFX.fs
+tresholdFX quad.vs tresholdFX.fs
+bloomFX quad.vs bloomFX.fs
+AAFX quad.vs AAFX.fs
+DOFFX quad.vs DOFFX.fs
+
+volume_direct quad.vs volume_direct.fs
+
 probe basic.vs probe.fs
 
 \irrProbes
@@ -346,7 +356,6 @@ float getShadowFactor(bool directional, vec3 world_position, mat4 shadow_viewpro
 	return shadow_factor;
 }
 
-
 \basiclight.fs
 
 #version 330 core
@@ -458,15 +467,16 @@ void main()
 uniform vec3 u_light_pos;
 uniform vec3 u_light_color;
 uniform vec3 u_light_target;
+
 uniform float u_light_intensity;
 uniform float u_light_max_dists;
 uniform float u_light_coscutoff;
 uniform float u_light_spotexp;
+
 uniform int u_num_lights;
 uniform int u_light_type;
 
 uniform vec3 u_ambient_light;
-
 
 \multipasslight.fs
 
@@ -1304,4 +1314,341 @@ void main()
 	vec4 color = vec4(ComputeSHIrradiance(N, sh), 1.0);
 
 	FragColor = color;
+}
+
+\blurFX.fs
+#version 330 core
+
+out vec4 FragColor;
+  
+in vec2 v_uv;
+
+uniform sampler2D u_input;
+  
+uniform bool horizontal;
+uniform float weight[5] = float[] (0.227027, 0.1945946, 0.1216216, 0.054054, 0.016216);
+
+void main()
+{             
+    vec2 tex_offset = 1.0 / textureSize(u_input, 0); // gets size of single texel
+    vec3 result = texture(u_input, v_uv).rgb * weight[0]; // current fragment's contribution
+    if(horizontal)
+    {
+        for(int i = 1; i < 5; ++i)
+        {
+            result += texture(u_input, v_uv + vec2(tex_offset.x * i, 0.0)).rgb * weight[i];
+            result += texture(u_input, v_uv - vec2(tex_offset.x * i, 0.0)).rgb * weight[i];
+        }
+    }
+    else
+    {
+        for(int i = 1; i < 5; ++i)
+        {
+            result += texture(u_input, v_uv + vec2(0.0, tex_offset.y * i)).rgb * weight[i];
+            result += texture(u_input, v_uv - vec2(0.0, tex_offset.y * i)).rgb * weight[i];
+        }
+    }
+    FragColor = vec4(result, 1.0);
+}
+
+\tresholdFX.fs
+
+#version 330 core
+
+out vec4 BrightColor;
+  
+in vec2 v_uv;
+
+uniform float u_treshold_intensity;
+uniform sampler2D u_input;
+
+void main() {
+    vec4 color = texture(u_input, v_uv);
+
+    // check whether fragment output is higher than threshold, if so output as brightness color
+    float brightness = dot(color.rgb, vec3(0.2126, 0.7152, 0.0722));
+	
+    if (brightness > (u_treshold_intensity / 10))
+        BrightColor = vec4(color.rgb, 1.0);
+    else
+        BrightColor = vec4(0.0, 0.0, 0.0, 1.0);	
+}  
+
+\bloomFX.fs
+
+#version 330 core
+
+out vec4 FragColor;
+  
+in vec2 v_uv;
+
+uniform float u_bloom_intensity;
+
+uniform sampler2D u_input;
+uniform sampler2D u_input_blurred;
+
+void main() {
+    vec4 color_base = texture(u_input, v_uv);
+    vec4 color_blurred = texture(u_input_blurred, v_uv);
+
+	FragColor = color_base + color_blurred * u_bloom_intensity;
+}  
+
+\AAFX.fs
+#version 330 core
+
+out vec4 FragColor;
+
+uniform sampler2D u_input;
+
+uniform vec2 u_viewportSize;
+uniform vec2 u_iViewportSize;
+
+#define FXAA_REDUCE_MIN  (1.0/ 128.0)
+#define FXAA_REDUCE_MUL  (1.0 / 8.0)
+#define FXAA_SPAN_MAX    8.0
+
+vec4 applyFXAA(sampler2D tex, vec2 fragCoord){
+
+		vec4 color = vec4(0.0);
+		
+		// per cada pixel s'agafa es pixels des costats en forma de x 
+		// NW, NE, SW, SE, M venen de NortWest, NortEast, SouthWest, SwoutEast i middle respectivament
+		vec3 rgbNW = texture2D(tex, (fragCoord + vec2(-1.0, -1.0)) * u_iViewportSize).xyz;
+		vec3 rgbNE = texture2D(tex, (fragCoord + vec2(1.0, -1.0)) * u_iViewportSize).xyz;
+		vec3 rgbSW = texture2D(tex, (fragCoord + vec2(-1.0, 1.0)) * u_iViewportSize).xyz;
+		vec3 rgbSE = texture2D(tex, (fragCoord + vec2(1.0, 1.0)) * u_iViewportSize).xyz;
+		vec3 rgbM  = texture2D(tex, fragCoord  * u_iViewportSize).xyz;
+
+		// Aixo es per treure sa luminancia de cada pixel
+		vec3 luma = vec3(0.299, 0.587, 0.114);
+
+		// Aqui s'aplica es vector per sabra sa luminancia
+		float lumaNW = dot(rgbNW, luma);
+		float lumaNE = dot(rgbNE, luma);
+		float lumaSW = dot(rgbSW, luma);
+		float lumaSE = dot(rgbSE, luma);
+		float lumaM  = dot(rgbM,  luma);
+
+		float lumaMin = min(lumaM, min(min(lumaNW, lumaNE), min(lumaSW, lumaSE)));
+		float lumaMax = max(lumaM, max(max(lumaNW, lumaNE), max(lumaSW, lumaSE)));
+
+		// Aqui ja se fa un blur a nes edges d'escala
+		vec2 dir;
+		dir.x = -((lumaNW + lumaNE) - (lumaSW + lumaSE));
+		dir.y =  ((lumaNW + lumaSW) - (lumaNE + lumaSE));
+		
+		float dirReduce = max((lumaNW + lumaNE + lumaSW + lumaSE) * (0.25 * FXAA_REDUCE_MUL), FXAA_REDUCE_MIN);
+		float rcpDirMin = 1.0 / (min(abs(dir.x), abs(dir.y)) + dirReduce);
+
+		dir = min(vec2(FXAA_SPAN_MAX, FXAA_SPAN_MAX), max(vec2(-FXAA_SPAN_MAX, -FXAA_SPAN_MAX), dir * rcpDirMin)) * u_iViewportSize;
+
+		vec3 rgbA = 0.5 * (texture2D(tex, fragCoord * u_iViewportSize + dir * (1.0 / 3.0 - 0.5)).xyz + texture2D(tex, fragCoord * u_iViewportSize + dir * (2.0 / 3.0 - 0.5)).xyz);
+		vec3 rgbB = rgbA * 0.5 + 0.25 * (texture2D(tex, fragCoord * u_iViewportSize + dir * -0.5).xyz + texture2D(tex, fragCoord * u_iViewportSize + dir * 0.5).xyz);
+
+		float lumaB = dot(rgbB, luma);
+		
+		if ((lumaB < lumaMin) || (lumaB > lumaMax))
+			color = vec4(rgbA, 1.0);
+		else
+			color = vec4(rgbB, 1.0);
+
+		return color;
+}
+
+void main(){
+	FragColor = applyFXAA(u_input, gl_FragCoord.xy);
+}
+
+\DOFFX.fs
+#version 330 core
+// Es codig des shader esta disponible a 
+// https://github.com/lettier/3d-game-shaders-for-beginners/blob/master/demonstration/shaders/fragment/depth-of-field.frag
+// pero per ajustar un parell de coses tambe he hagut de llegir aquest paper https://fileadmin.cs.lth.se/cs/Education/EDAN35/lectures/12DOF.pdf
+
+out vec4 FragColor;
+
+uniform sampler2D u_input;
+uniform sampler2D u_input_blurred;
+uniform sampler2D u_decal_texture;
+
+uniform mat4 u_inverse_viewprojection;
+
+uniform vec2 u_iRes;
+
+uniform float u_min_distance;
+uniform float u_max_distance;
+
+uniform vec3 u_camera_pos;
+
+void main(){
+	
+	vec2 uv = gl_FragCoord.xy * u_iRes;
+
+	float depth = texture( u_decal_texture, uv).x;
+
+	vec4 screen_pos = vec4(uv.x * 2.0 - 1.0, uv.y * 2.0 - 1.0, depth * 2.0 - 1.0, 1.0);
+  	vec4 proj_worldpos = u_inverse_viewprojection * screen_pos;
+  	vec3 worldpos = proj_worldpos.xyz / proj_worldpos.w;
+
+	vec4 color = texture(u_input, uv);
+	vec4 color_blurred = texture(u_input_blurred, uv);
+
+	float blur = smoothstep(u_min_distance, u_max_distance, length(worldpos - u_camera_pos));
+	FragColor = mix(color, color_blurred, blur);
+}
+
+\volume_direct.fs
+#version 330 core
+
+uniform sampler2D u_depth_texture;
+uniform sampler2D u_shadowmap;
+uniform vec3 u_camera_pos;
+
+uniform mat4 u_inverse_viewprojection;
+uniform mat4 u_shadow_viewproj;
+uniform float u_shadow_bias;
+
+in vec2 v_uv;
+
+out vec4 FragColor;
+
+#define SAMPLES 1024
+
+#include "includeLights"
+#include "hdr"
+
+float computeShadow(vec3 world_position)
+{
+	//project our 3D position to the shadowmap
+	vec4 proj_pos = u_shadow_viewproj * vec4(world_position, 1.0);
+
+	//from homogeneus space to clip space
+	vec2 shadow_uv = proj_pos.xy / proj_pos.w;
+
+	//from clip space to uv space
+	shadow_uv = shadow_uv * 0.5 + vec2(0.5);
+
+	//get point depth [-1 .. +1] in non-linear space
+	float real_depth = (proj_pos.z - u_shadow_bias) / proj_pos.w;
+
+	//normalize from [-1..+1] to [0..+1] still non-linear
+	real_depth = real_depth * 0.5 + 0.5;
+
+	//read depth from depth buffer in [0..+1] non-linear
+	float shadow_depth = texture( u_shadowmap, shadow_uv ).x;
+
+	//compute final shadow factor by comparing
+	float shadow_factor = 1.0;
+
+	if( shadow_depth < real_depth )
+		shadow_factor = 0.0;
+
+	// if( shadow_uv.x < 0.0 || shadow_uv.x > 1.0 ||
+	// shadow_uv.y < 0.0 || shadow_uv.y > 1.0 )
+	// 	shadow_factor = 1.0;
+
+	// //it is before near or behind far plane
+	// if(real_depth < 0.0 || real_depth > 1.0)
+	// 	shadow_factor = 1.0;
+
+	//we can compare them, even if they are not linear
+	
+	return shadow_factor;
+}
+
+void main () {
+	vec2 uv = v_uv;
+
+	float depth = texture( u_depth_texture, uv).x;
+
+	vec4 screen_pos = vec4(uv.x * 2.0 - 1.0, uv.y * 2.0 - 1.0, depth * 2.0 - 1.0, 1.0);
+    vec4 proj_worldpos = u_inverse_viewprojection * screen_pos;
+    vec3 worldpos = proj_worldpos.xyz / proj_worldpos.w;
+
+	vec3 color = vec3(0.0);
+
+	vec3 ray_dir = worldpos - u_camera_pos;
+	float dist = length( ray_dir );
+	ray_dir /= dist;
+
+	float step_dist = dist / float(SAMPLES);
+	float air_density = 0.001;
+	float transparency = 0.15;
+
+	vec3 current_pos = u_camera_pos;
+	vec3 ray_offset = ray_dir * step_dist;
+
+	float shadow_factor;
+	vec3 lineal_color = degamma(u_light_color);
+
+	for(int i = 0; i < SAMPLES; i++)
+	{
+		shadow_factor = computeShadow( current_pos );
+
+		transparency -= (air_density * step_dist);
+
+		color += shadow_factor * lineal_color * step_dist * air_density;
+
+		if (transparency < 0.001)
+			break;
+
+		current_pos.xyz += ray_offset;
+	}
+	
+	// float shadow_depth = texture( u_shadowmap, uv ).x;
+	// vec3 aux = vec3(shadow_factor);
+	FragColor = vec4(color, transparency);
+}
+
+\decalls.fs
+#version 330 core
+
+uniform sampler2D u_depth_texture;
+uniform sampler2D u_normal_texture;
+uniform sampler2D u_extra_texture;
+uniform sampler2D u_color_texture;
+
+uniform sampler2D u_decal_texture;
+
+uniform mat4 u_inverse_viewprojection;
+uniform mat4 u_model;
+uniform mat4 u_iModel;
+
+uniform vec2 u_iRes;
+
+layout(location = 0) out vec4 FragColor;
+layout(location = 1) out vec4 NormalColor;
+layout(location = 2) out vec4 ExtraColor;
+
+void main () {
+	vec2 uv = gl_FragCoord.xy * u_iRes;
+
+	vec4 albedo = texture( u_color_texture , uv);
+	vec4 normal = texture( u_normal_texture , uv);
+	vec4 extra = texture( u_extra_texture , uv);
+
+	vec3 N = normalize(normal.xyz * 2.0 - vec3(1.0));
+
+	float depth = texture( u_depth_texture, uv).x;
+	if (depth == 1.0)
+		discard;
+
+	vec4 screen_pos = vec4(uv.x * 2.0 - 1.0, uv.y * 2.0 - 1.0, depth * 2.0 - 1.0, 1.0);
+    vec4 proj_worldpos = u_inverse_viewprojection * screen_pos;
+    vec3 worldpos = proj_worldpos.xyz / proj_worldpos.w;
+
+	vec3 localpos = (u_iModel * vec4(worldpos, 1.0)).xyz;
+
+	uv = localpos.xz * 0.5 + vec2(0.5);
+	vec4 decal = texture(u_decal_texture, uv);
+
+	if (decal.a < 0.5 || uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0)
+		discard;
+
+	albedo.xyz = decal.xyz;
+
+	FragColor = albedo;
+	NormalColor = normal;
+	ExtraColor = extra;
 }

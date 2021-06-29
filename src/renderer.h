@@ -24,6 +24,13 @@ namespace GTR {
 		DEFERRED
 	};
 
+	enum eFxMode {
+		AA,
+		BLUR,
+		TRESHOLD,
+		BLOOM,
+		DOF
+	};
 
 	enum eBlendMode {
 		DITHERING,
@@ -53,6 +60,28 @@ namespace GTR {
 		void apply(Texture* depth_buffer, Texture* normal_buffer, Camera* cam, Texture* output);
 	};
 
+	class FX {
+	public:
+
+		int w;
+		int h;
+
+		float treshold_intensity;
+		float bloom_intensity;
+		float focal_intensity;
+		float min_distance;
+		float max_distance;
+
+		FX();
+
+		void treshold(Texture* input, Texture* output);
+		void blur(Texture* input, Texture* output);
+		void bloom(Texture* input_base, Texture* input_blurred, Texture* output);
+		void aa(Texture* input, Texture* output);
+		void dof(Texture* input, Texture* input_blurred, Texture* depth_buffer, Camera* camera, Texture* output);
+		void setFX(eFxMode fx, Texture* input, Texture* output, Texture* second_input = NULL, Texture* depth_buffer = NULL, Camera* camera = NULL);
+	};
+
 	//struct to store probes
 	struct sProbe {
 		Vector3 pos; //where is located
@@ -70,11 +99,13 @@ namespace GTR {
 
 	public:
 
+		int w;
+		int h;
 		//add here your functions
 		//...
 		FBO fbo;
 		FBO gbuffers_fbo;
-		FBO final_fbo;
+		FBO decals_fbo;
 		FBO* irr_fbo;
 
 		bool rendering_shadowmap;
@@ -116,7 +147,18 @@ namespace GTR {
 		Texture* ao_blur_buffer = NULL;
 		Texture* probes_texture = NULL;
 
+		Texture* fx_blur_buffer = NULL;
+		Texture* fx_threshold_buffer = NULL;
+		Texture* fx_bloom_buffer = NULL;
+		Texture* fx_aa_buffer = NULL;
+		Texture* fx_dof_buffer = NULL;
+		Texture* fx_dof_blurred_buffer = NULL;
+
 		SSAOFX ssao;
+
+		FX fx;
+
+		Matrix44 previous_vp;
 
 		std::vector<sProbe> probes;
 
@@ -132,6 +174,8 @@ namespace GTR {
 		//renders several elements of the scene
 
 		void render(GTR::Scene* scene, Camera* camera);
+
+		void renderFinalFBO(GTR::Scene* scene, Camera* camera);
 
 		void collectRenderCalls(GTR::Scene* scene, Camera* camera);
 
@@ -168,8 +212,11 @@ namespace GTR {
 		void updateIrradianceCache(GTR::Scene* scene);
 
 		void createIrradianceMap();
+		void computeVolumetric(Camera* camera, Texture* depth_texture, Scene* scene);
 
-		void view_gbuffers(FBO* gbuffers_fbo, float w, float h, Camera* camera);
+		void renderDecalls(GTR::Scene* scene, Camera* camera);
+
+		void view_gbuffers(Camera* camera);
 		void renderFinalFBO(FBO* gbuffers_fbo, Camera* camera, GTR::Scene* scene, bool hdr, Texture* ao_buffer, std::vector <renderCall>& rendercalls);
 		void setUniformsLight(LightEntity* light, Camera* camera, GTR::Scene* scene, Texture* ao_buffer, Shader* shader, bool hdr, FBO* gbuffers_fbo, bool first_iter);
 
