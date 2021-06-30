@@ -9,7 +9,6 @@
 //forward declaration
 class cJSON;
 
-
 //our namespace
 namespace GTR {
 
@@ -97,6 +96,8 @@ namespace GTR {
 	{
 	public:
 		static Scene* instance;
+
+		Texture* enviroment = NULL;
 
 		Vector3 background_color;
 		Vector3 ambient_light;

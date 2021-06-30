@@ -10,6 +10,7 @@
 #include "prefab.h"
 #include "gltf_loader.h"
 #include "renderer.h"
+#include "extra/hdre.h"
 
 #include <cmath>
 #include <string>
@@ -75,6 +76,9 @@ Application::Application(int window_width, int window_height, SDL_Window* window
 	//This class will be the one in charge of rendering all
 	renderer = new GTR::Renderer(); //here so we have opengl ready in constructor
 
+	HDRE* hdre = new HDRE();
+	if (hdre->load("data/night.hdre"))
+		scene->enviroment = GTR::CubemapFromHDRE("data/night.hdre");
 	//hide the cursor
 	SDL_ShowCursor(!mouse_locked); //hide or show the mouse
 }
@@ -310,7 +314,7 @@ void Application::onKeyDown( SDL_KeyboardEvent event )
 		case SDLK_6: renderer->hdr = !renderer->hdr; break;
 		case SDLK_7: renderer->show_ao_buffer = !renderer->show_ao_buffer; break;
 		case SDLK_0: renderer->updateIrradianceCache(scene); break;
-		case SDLK_m: renderer->show_irr_fbo = !renderer->show_irr_fbo; break;
+		case SDLK_m: renderer->show_irr_fbo = !renderer->show_irr_fbo; break; 
 	}
 }
 

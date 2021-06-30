@@ -136,8 +136,9 @@ namespace GTR {
 		bool apply_ssao = true;
 		bool show_irr_fbo = false;
 		bool apply_irr = true;
-		bool apply_tri_irr = false;
+		bool apply_tri_irr = true;
 		bool show_probes_text = false;
+		bool render_probes = false;
 
 		float average_lum;
 		float lum_white;
@@ -215,6 +216,8 @@ namespace GTR {
 		void computeVolumetric(Camera* camera, Texture* depth_texture, Scene* scene);
 
 		void renderDecalls(GTR::Scene* scene, Camera* camera);
+
+		void renderSkybox(Texture* skybox, Camera* camera);
 
 		void view_gbuffers(Camera* camera);
 		void renderFinalFBO(FBO* gbuffers_fbo, Camera* camera, GTR::Scene* scene, bool hdr, Texture* ao_buffer, std::vector <renderCall>& rendercalls);

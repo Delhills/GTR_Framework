@@ -1,6 +1,7 @@
 //example of some shaders compiled
 flat basic.vs flat.fs
 texture basic.vs texture.fs
+skybox basic.vs skybox.fs
 depth quad.vs depth.fs
 fx quad.vs fx.fs
 multi basic.vs multi.fs
@@ -278,6 +279,26 @@ void main()
 	FragColor = color;
 }
 
+\skybox.fs
+
+#version 330 core
+
+
+in vec3 v_world_position;
+
+uniform vec4 u_color;
+uniform samplerCube u_enviroment_texture;
+uniform vec3 u_camera_pos;
+
+out vec4 FragColor;
+
+void main()
+{
+	vec3 V = v_world_position - u_camera_pos;
+	vec4 color = texture( u_enviroment_texture, V );
+
+	FragColor = color;
+}
 
 
 \computeNormal
@@ -796,6 +817,8 @@ uniform vec3 u_irr_end;
 uniform vec3 u_irr_dim;
 uniform vec3 u_irr_delta;
 
+uniform samplerCube u_enviroment_texture;
+uniform bool u_last_iter;
 
 uniform float u_time;
 out vec4 FragColor;
@@ -955,6 +978,12 @@ void main()
 	if(u_first_iter){
 		color += linearEmmisive;
 	}
+
+	vec3 R = reflect(-V, N);
+
+	vec3 reflection = textureLod( u_enviroment_texture, R, roughness * 4.0 ).xyz * metalness * 0.4;
+	color += reflection;
+
 
 	FragColor = vec4(color, 1.0);
 

@@ -76,6 +76,10 @@ void Renderer::renderForward(GTR::Scene* scene, std::vector <renderCall>& render
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	checkGLErrors();
 
+	if (scene->enviroment) {
+		renderSkybox(scene->enviroment, camera);
+	}
+
 	for (size_t i = 0; i < rendercalls.size(); i++)
 	{
 		renderCall& rc = rendercalls[i];
@@ -149,17 +153,17 @@ void Renderer::renderDeferred(GTR::Scene* scene, std::vector <renderCall>& rende
 		fx_dof_blurred_buffer = new Texture(w, h, GL_RGBA, GL_FLOAT);
 
 	// Aplicam AA
-	fx.aa(fbo.color_textures[0], fx_aa_buffer);
+	//fx.aa(fbo.color_textures[0], fx_aa_buffer);
 
-	// Bloom
-	fx.treshold(fx_aa_buffer, fx_threshold_buffer);
-	fx.blur(fx_threshold_buffer, fx_blur_buffer);
-	fx.bloom(fx_aa_buffer, fx_blur_buffer, fx_bloom_buffer);
+	//// Bloom
+	//fx.treshold(fx_aa_buffer, fx_threshold_buffer);
+	//fx.blur(fx_threshold_buffer, fx_blur_buffer);
+	//fx.bloom(fx_aa_buffer, fx_blur_buffer, fx_bloom_buffer);
 
-	// Aplicam DoF
-	fx.blur(fx_bloom_buffer, fx_dof_blurred_buffer);
-	fx.blur(fx_dof_blurred_buffer, fx_aa_buffer);
-	fx.dof(fx_bloom_buffer, fx_aa_buffer, fbo.depth_texture, camera, fx_dof_buffer);
+	//// Aplicam DoF
+	//fx.blur(fx_bloom_buffer, fx_dof_blurred_buffer);
+	//fx.blur(fx_dof_blurred_buffer, fx_aa_buffer);
+	//fx.dof(fx_bloom_buffer, fx_aa_buffer, fbo.depth_texture, camera, fx_dof_buffer);
 
 	Shader* final_shader = Shader::Get("tonemapper"); //este aplica tonemapper
 
@@ -169,10 +173,10 @@ void Renderer::renderDeferred(GTR::Scene* scene, std::vector <renderCall>& rende
 	final_shader->setUniform("u_scale", scale_tm);
 
 	if (hdr)
-		fx_dof_buffer->toViewport(final_shader);
+		fbo.color_textures[0]->toViewport(final_shader);
 		//fx_bloom_buffer->toViewport(final_shader);
 	else
-		decals_fbo.color_textures[0]->toViewport();
+		fbo.color_textures[0]->toViewport();
 
 	glDisable(GL_BLEND);
 
@@ -194,6 +198,32 @@ void Renderer::renderDeferred(GTR::Scene* scene, std::vector <renderCall>& rende
 		glViewport(0, 0, w, h);
 	}
 
+}
+
+void Renderer::renderSkybox(Texture* skybox, Camera* camera)
+{
+	Mesh* mesh = Mesh::Get("data/meshes/sphere.obj", false);
+	Shader* shader = Shader::Get("skybox");
+	shader->enable();
+
+	Matrix44 m;
+	m.translate(camera->eye.x, camera->eye.y, camera->eye.z);
+	m.scale(5, 5, 5);
+
+	shader->setUniform("u_model", m);
+	shader->setUniform("u_viewprojection", camera->viewprojection_matrix);
+	shader->setUniform("u_camera_pos", camera->eye);
+
+	shader->setTexture("u_enviroment_texture", skybox, 9);
+
+	glDisable(GL_BLEND);
+	glDisable(GL_CULL_FACE);
+	glDisable(GL_DEPTH_TEST);
+
+	mesh->render(GL_TRIANGLES);
+
+	glEnable(GL_CULL_FACE);
+	glEnable(GL_DEPTH_TEST);
 }
 
 void Renderer::renderFinalFBO(FBO* gbuffers_fbo, Camera* camera, GTR::Scene* scene, bool hdr, Texture* ao_buffer, std::vector <renderCall>& rendercalls) {
@@ -221,6 +251,7 @@ void Renderer::renderFinalFBO(FBO* gbuffers_fbo, Camera* camera, GTR::Scene* sce
 		shader->enable();
 		mesh = quad;
 		bool first_iter = (i == 0);
+		bool last_iter = (i == scene->lights.size()-1);
 
 		setUniformsLight(light, camera, scene, ao_buffer, shader, hdr, gbuffers_fbo, first_iter);
 
@@ -233,6 +264,10 @@ void Renderer::renderFinalFBO(FBO* gbuffers_fbo, Camera* camera, GTR::Scene* sce
 		shader->setUniform("u_irr_delta", irr_delta);
 		shader->setUniform("u_irr_normal_dist", irr_normal_dist);
 		shader->setUniform("u_probes_texture", probes_texture, 6);
+		shader->setUniform("u_last_iter", last_iter);
+		shader->setTexture("u_enviroment_texture", scene->enviroment, 7);
+
+
 
 
 		glEnable(GL_BLEND);
@@ -262,9 +297,12 @@ void Renderer::renderFinalFBO(FBO* gbuffers_fbo, Camera* camera, GTR::Scene* sce
 
 	int numProbes = probes.size();
 	//now compute the coeffs for every probe
-	for (int iP = 0; iP < numProbes; ++iP) {
-		int probe_index = iP;
-		renderProbe(probes[iP].pos, 3.0, probes[iP].sh.coeffs[0].v);
+	if (render_probes)
+	{
+		for (int iP = 0; iP < numProbes; ++iP) {
+			int probe_index = iP;
+			renderProbe(probes[iP].pos, 3.0, probes[iP].sh.coeffs[0].v);
+		}
 	}
 
 	if (irr_fbo && show_irr_fbo) {
@@ -834,6 +872,8 @@ void GTR::Renderer::renderInMenu() {
 		if (apply_irr)
 		{
 			ImGui::Checkbox("Apply trilinear interpolation irr", &apply_tri_irr);
+			if(ImGui::Button("Update Irr Cache", ImVec2(200.0, 20.0))) updateIrradianceCache(Scene::instance);
+			ImGui::Checkbox("Render Irradiance Probes", &render_probes);
 		}
 		ImGui::Checkbox("Show probes_text", &show_probes_text);
 		if (hdr) {
@@ -857,6 +897,9 @@ void GTR::Renderer::renderGBuffers(Scene* scene, std::vector <renderCall>& rende
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glEnable(GL_DEPTH_TEST);
 	checkGLErrors();
+
+	if (scene->enviroment)
+		renderSkybox(scene->enviroment, camera);
 
 	for (size_t i = 0; i < rendercalls.size(); i++)
 	{
@@ -912,7 +955,6 @@ void GTR::Renderer::defineAndPosGridProbe(GTR::Scene* scene)
 			numProb, //as many rows as probes
 			GL_RGB, //3 channels per coefficient
 			GL_FLOAT); //they require a high range
-		updateIrradianceCache(scene);
 	}
 }
 
