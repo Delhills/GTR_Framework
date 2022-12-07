@@ -279,28 +279,6 @@ void main()
 	FragColor = color;
 }
 
-\skybox.fs
-
-#version 330 core
-
-
-in vec3 v_world_position;
-
-uniform vec4 u_color;
-uniform samplerCube u_enviroment_texture;
-uniform vec3 u_camera_pos;
-
-out vec4 FragColor;
-
-void main()
-{
-	vec3 V = v_world_position - u_camera_pos;
-	vec4 color = texture( u_enviroment_texture, V );
-
-	FragColor = color;
-}
-
-
 \computeNormal
 
 mat3 cotangent_frame(vec3 N, vec3 p, vec2 uv)
@@ -780,7 +758,26 @@ vec3 gamma(vec3 c)
 	return pow(c,vec3(1.0/2.2));;
 }
 
+\skybox.fs
 
+#version 330 core
+
+
+in vec3 v_world_position;
+
+uniform vec4 u_color;
+uniform samplerCube u_enviroment_texture;
+uniform vec3 u_camera_pos;
+
+out vec4 FragColor;
+
+void main()
+{
+	vec3 V = v_world_position - u_camera_pos;
+	vec4 color = texture( u_enviroment_texture, V, 0.0);
+	
+	FragColor = color;
+}
 
 
 
@@ -804,6 +801,7 @@ uniform float u_shadow_bias;
 uniform bool u_cast_shadows;
 uniform bool u_first_iter;
 uniform bool hdr;
+uniform bool u_use_reflections;
 
 uniform bool u_apply_ssao;
 
@@ -977,16 +975,15 @@ void main()
 	
 	if(u_first_iter){
 		color += linearEmmisive;
+		if (u_use_reflections) {
+			vec3 R = reflect(-V, N);
+
+			vec3 reflection = textureLod( u_enviroment_texture, R, roughness * 8.0 ).xyz * metalness * 0.5;
+			color += reflection;
+		}
 	}
 
-	vec3 R = reflect(-V, N);
-
-	vec3 reflection = textureLod( u_enviroment_texture, R, roughness * 4.0 ).xyz * metalness * 0.4;
-	color += reflection;
-
-
 	FragColor = vec4(color, 1.0);
-
 }
 
 
@@ -1499,11 +1496,15 @@ out vec4 FragColor;
 
 uniform sampler2D u_input;
 uniform sampler2D u_input_blurred;
-uniform sampler2D u_decal_texture;
+uniform sampler2D u_depth_buffer;
 
 uniform mat4 u_inverse_viewprojection;
 
 uniform vec2 u_iRes;
+uniform vec3 u_focus_point;
+uniform vec3 u_camera_center;
+
+uniform float u_dist_of_focus;
 
 uniform float u_min_distance;
 uniform float u_max_distance;
@@ -1514,7 +1515,7 @@ void main(){
 	
 	vec2 uv = gl_FragCoord.xy * u_iRes;
 
-	float depth = texture( u_decal_texture, uv).x;
+	float depth = texture( u_depth_buffer, uv).x;
 
 	vec4 screen_pos = vec4(uv.x * 2.0 - 1.0, uv.y * 2.0 - 1.0, depth * 2.0 - 1.0, 1.0);
   	vec4 proj_worldpos = u_inverse_viewprojection * screen_pos;
@@ -1523,7 +1524,10 @@ void main(){
 	vec4 color = texture(u_input, uv);
 	vec4 color_blurred = texture(u_input_blurred, uv);
 
-	float blur = smoothstep(u_min_distance, u_max_distance, length(worldpos - u_camera_pos));
+	vec3 front = u_camera_center - u_camera_pos; // Calculamos el front de la camara
+	vec3 focus_point = u_camera_pos + u_dist_of_focus * normalize(front); // cogemos desde donde esta y lo multiplicamos por un numero hacia donde apunta
+
+	float blur = smoothstep(u_min_distance, u_max_distance, abs(length(worldpos - focus_point)));
 	FragColor = mix(color, color_blurred, blur);
 }
 

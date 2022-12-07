@@ -27,14 +27,9 @@ Renderer::Renderer() {
 
 	render_mode = eRenderMode::DEFAULT;
 	pipeline_mode = ePipelineMode::DEFERRED;
-	blend_mode = DITHERING;
+	blend_mode = FORWARD_BLEND;
 
 	fbo.create(w, h, 1, GL_RGBA, GL_FLOAT, true);
-
-	//memset(&probe, 0, sizeof(probe));
-	//probe.pos.set(76, 38, 96);
-	//probe.sh.coeffs[0].set(1, 0, 0);
-	//probe.sh.coeffs[1].set(0, 1, 0);
 
 	if (apply_irr)
 	{
@@ -48,6 +43,14 @@ Renderer::Renderer() {
 
 		defineAndPosGridProbe(GTR::Scene::instance);
 	}
+
+	fx_blur_buffer = new Texture(w, h, GL_RGBA, GL_FLOAT);
+	fx_threshold_buffer = new Texture(w, h, GL_RGBA, GL_FLOAT);
+	fx_bloom_buffer = new Texture(w, h, GL_RGBA, GL_FLOAT);
+	fx_aa_buffer = new Texture(w, h, GL_RGBA, GL_FLOAT);
+	fx_dof_buffer = new Texture(w, h, GL_RGBA, GL_FLOAT);
+	fx_dof_blurred_buffer = new Texture(w, h, GL_RGBA, GL_FLOAT);
+	fx_dof_blurred_buffer_2 = new Texture(w, h, GL_RGBA, GL_FLOAT);
 }
 
 
@@ -132,38 +135,29 @@ void Renderer::renderDeferred(GTR::Scene* scene, std::vector <renderCall>& rende
 
 	fbo.bind();	//textura final pre hdr
 	renderFinalFBO(&gbuffers_fbo, camera, scene, hdr, ao_buffer, rendercalls);
+	if (updateIrradianceOnce) { // Para que comience updateada la irradiancia
+		updateIrradianceCache(scene);
+		updateIrradianceOnce = false;
+	}
 	fbo.unbind();
 
-	if (!fx_blur_buffer)
-		fx_blur_buffer = new Texture(w, h, GL_RGBA, GL_FLOAT);
-
-	if (!fx_threshold_buffer)
-		fx_threshold_buffer = new Texture(w, h, GL_RGBA, GL_FLOAT);
-
-	if (!fx_bloom_buffer)
-		fx_bloom_buffer = new Texture(w, h, GL_RGBA, GL_FLOAT);
-
-	if (!fx_aa_buffer)
-		fx_aa_buffer = new Texture(w, h, GL_RGBA, GL_FLOAT);
-
-	if (!fx_dof_buffer)
-		fx_dof_buffer = new Texture(w, h, GL_RGBA, GL_FLOAT);
-
-	if (!fx_dof_blurred_buffer)
-		fx_dof_blurred_buffer = new Texture(w, h, GL_RGBA, GL_FLOAT);
-
 	// Aplicam AA
-	//fx.aa(fbo.color_textures[0], fx_aa_buffer);
+	fx.aa(fbo.color_textures[0], fx_aa_buffer);
 
-	//// Bloom
-	//fx.treshold(fx_aa_buffer, fx_threshold_buffer);
-	//fx.blur(fx_threshold_buffer, fx_blur_buffer);
-	//fx.bloom(fx_aa_buffer, fx_blur_buffer, fx_bloom_buffer);
+	// Bloom
+	fx.treshold(fx_aa_buffer, fx_threshold_buffer);
+	fx.horizontal = false;
+	fx.blur(fx_threshold_buffer, fx_blur_buffer);
+	fx.horizontal = true;
+	fx.blur(fx_blur_buffer, fx_threshold_buffer);
+	fx.bloom(fx_aa_buffer, fx_threshold_buffer, fx_bloom_buffer);
 
-	//// Aplicam DoF
-	//fx.blur(fx_bloom_buffer, fx_dof_blurred_buffer);
-	//fx.blur(fx_dof_blurred_buffer, fx_aa_buffer);
-	//fx.dof(fx_bloom_buffer, fx_aa_buffer, fbo.depth_texture, camera, fx_dof_buffer);
+	// Aplicam DoF
+	fx.horizontal = false;
+	fx.blur(fx_bloom_buffer, fx_dof_blurred_buffer);
+	fx.horizontal = true;
+	fx.blur(fx_dof_blurred_buffer, fx_dof_blurred_buffer_2);
+	fx.dof(fx_bloom_buffer, fx_dof_blurred_buffer_2, fbo.depth_texture, camera, fx_dof_buffer);
 
 	Shader* final_shader = Shader::Get("tonemapper"); //este aplica tonemapper
 
@@ -172,9 +166,14 @@ void Renderer::renderDeferred(GTR::Scene* scene, std::vector <renderCall>& rende
 	final_shader->setUniform("u_lumwhite2", lum_white * lum_white);
 	final_shader->setUniform("u_scale", scale_tm);
 
-	if (hdr)
-		fbo.color_textures[0]->toViewport(final_shader);
-		//fx_bloom_buffer->toViewport(final_shader);
+	if (hdr) {
+		if (use_only_FXAA)
+			fx_aa_buffer->toViewport(final_shader);
+		else if (use_bloom_dof)
+			fx_dof_buffer->toViewport(final_shader);
+		else
+			fbo.color_textures[0]->toViewport(final_shader);
+	}
 	else
 		fbo.color_textures[0]->toViewport();
 
@@ -214,7 +213,7 @@ void Renderer::renderSkybox(Texture* skybox, Camera* camera)
 	shader->setUniform("u_viewprojection", camera->viewprojection_matrix);
 	shader->setUniform("u_camera_pos", camera->eye);
 
-	shader->setTexture("u_enviroment_texture", skybox, 9);
+	shader->setTexture("u_enviroment_texture", skybox, 0);
 
 	glDisable(GL_BLEND);
 	glDisable(GL_CULL_FACE);
@@ -266,9 +265,7 @@ void Renderer::renderFinalFBO(FBO* gbuffers_fbo, Camera* camera, GTR::Scene* sce
 		shader->setUniform("u_probes_texture", probes_texture, 6);
 		shader->setUniform("u_last_iter", last_iter);
 		shader->setTexture("u_enviroment_texture", scene->enviroment, 7);
-
-
-
+		shader->setUniform("u_use_reflections", use_reflections);
 
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_ONE, GL_ONE);
@@ -292,8 +289,9 @@ void Renderer::renderFinalFBO(FBO* gbuffers_fbo, Camera* camera, GTR::Scene* sce
 
 	glDisable(GL_BLEND);
 	glDisable(GL_DEPTH_TEST);
-
-	computeVolumetric(camera, gbuffers_fbo->depth_texture, scene);
+	
+	if (use_volumetric)
+		computeVolumetric(camera, gbuffers_fbo->depth_texture, scene);
 
 	int numProbes = probes.size();
 	//now compute the coeffs for every probe
@@ -869,6 +867,10 @@ void GTR::Renderer::renderInMenu() {
 		ImGui::Checkbox("Show depth fbo", &show_depthfbo);
 		ImGui::Checkbox("Apply tonemap", &hdr);
 		ImGui::Checkbox("Apply irr", &apply_irr);
+		ImGui::Checkbox("Use only FXAA", &use_only_FXAA);
+		ImGui::Checkbox("Use volumetric", &use_volumetric);
+		ImGui::Checkbox("Use reflection", &use_reflections);
+		ImGui::Checkbox("Use Bloom & DoF", &use_bloom_dof);
 		if (apply_irr)
 		{
 			ImGui::Checkbox("Apply trilinear interpolation irr", &apply_tri_irr);
@@ -884,7 +886,7 @@ void GTR::Renderer::renderInMenu() {
 		ImGui::Combo("Blend", (int*)&blend_mode, "DITHERING\0FORWARD", 2);
 		ImGui::SliderFloat("Treshold intensity", &fx.treshold_intensity, 0, 10);
 		ImGui::SliderFloat("Bloom intensity", &fx.bloom_intensity, 0, 10);
-		ImGui::SliderFloat("focal intesity", &fx.focal_intensity, 0, 1000);
+		ImGui::SliderFloat("focal intesity", &fx.focal_dist, 0, 5000);
 		ImGui::SliderFloat("min distance", &fx.min_distance, 0, 1000);
 		ImGui::SliderFloat("max distance", &fx.max_distance, 0, 1000);
 	}
@@ -1080,8 +1082,11 @@ Texture* GTR::CubemapFromHDRE(const char* filename)
 
 GTR::FX::FX() {
 	treshold_intensity = 1.0f;
-	bloom_intensity = 1.0f;
-	focal_intensity = 1.0f;
+	bloom_intensity = 0.63f;
+
+	focal_dist = 461;
+	min_distance = 101.0f;
+	max_distance = 189.0f;
 
 	float min_distance = 8;
 	float max_distance = 12;
@@ -1133,6 +1138,9 @@ void GTR::FX::setFX(eFxMode fx, Texture* input, Texture* output, Texture* second
 			sh->setTexture("u_input", input, 9);
 
 			switch (fx) {
+				case BLUR:
+					sh->setUniform("horizontal", horizontal);
+					break;
 				case AA: 
 					sh->setUniform("u_iViewportSize", Vector2(1.0 / (float)w, 1.0 / (float)h));
 					sh->setUniform("u_viewportSize", Vector2((float)w, (float)h));
@@ -1154,9 +1162,11 @@ void GTR::FX::setFX(eFxMode fx, Texture* input, Texture* output, Texture* second
 					sh->setUniform("u_camera_pos", camera->eye);
 
 					sh->setUniform("u_iRes", Vector2(1.0 / (float)w, 1.0 / (float)h));
+					sh->setUniform("u_dist_of_focus", focal_dist);
 
 					sh->setUniform("u_min_distance", min_distance);
 					sh->setUniform("u_max_distance", max_distance);
+					break;
 			}
 
 			quad->render(GL_TRIANGLES);

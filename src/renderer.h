@@ -68,9 +68,11 @@ namespace GTR {
 
 		float treshold_intensity;
 		float bloom_intensity;
-		float focal_intensity;
 		float min_distance;
 		float max_distance;
+		float focal_dist;
+
+		bool horizontal = false;
 
 		FX();
 
@@ -108,6 +110,11 @@ namespace GTR {
 		FBO decals_fbo;
 		FBO* irr_fbo;
 
+		bool use_only_FXAA = false;
+		bool use_bloom_dof = true;
+		bool use_volumetric = true;
+		bool use_reflections = true;
+		bool updateIrradianceOnce = true;
 		bool rendering_shadowmap;
 
 		eRenderMode render_mode;
@@ -154,6 +161,7 @@ namespace GTR {
 		Texture* fx_aa_buffer = NULL;
 		Texture* fx_dof_buffer = NULL;
 		Texture* fx_dof_blurred_buffer = NULL;
+		Texture* fx_dof_blurred_buffer_2 = NULL;
 
 		SSAOFX ssao;
 
